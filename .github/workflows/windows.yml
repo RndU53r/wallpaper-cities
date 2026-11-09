@@ -18,9 +18,9 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
 
@@ -32,7 +32,7 @@ jobs:
           -o windows\installer\publish
 
       - name: Upload the .scr + publish output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: WorldTimeScreensaver-scr
           path: windows/installer/publish
@@ -45,7 +45,7 @@ jobs:
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\installer\WorldTimeScreensaver.iss
 
       - name: Upload the installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: WorldTimeScreensaverSetup
           path: windows/installer/output/WorldTimeScreensaverSetup.exe

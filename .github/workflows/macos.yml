@@ -18,7 +18,7 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build WorldTimeScreensaver.saver
         run: |
@@ -33,13 +33,13 @@ jobs:
         run: macos/installer/build.sh
 
       - name: Upload .saver
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: WorldTimeScreensaver-saver
           path: macos/WorldTimeScreensaver/build/Release/WorldTimeScreensaver.saver
 
       - name: Upload .pkg installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: WorldTimeScreensaver-pkg
           path: macos/installer/build/WorldTimeScreensaver.pkg

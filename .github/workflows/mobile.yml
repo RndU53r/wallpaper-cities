@@ -19,7 +19,7 @@ jobs:
       run:
         working-directory: mobile/world_time
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -32,7 +32,7 @@ jobs:
       - name: Build for the iOS Simulator (unsigned — no Apple Developer identity configured)
         run: flutter build ios --simulator --no-codesign
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: WorldTime-iOS-Simulator
           path: mobile/world_time/build/ios/iphonesimulator/Runner.app
@@ -43,9 +43,9 @@ jobs:
       run:
         working-directory: mobile/world_time
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "17"
@@ -61,7 +61,7 @@ jobs:
       - name: Build a debug APK (sideloadable, no signing account needed)
         run: flutter build apk --debug
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: WorldTime-Android-debug
           path: mobile/world_time/build/app/outputs/flutter-apk/app-debug.apk
