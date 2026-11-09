@@ -1,0 +1,67 @@
+name: Mobile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile.yml"
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile.yml"
+  workflow_dispatch:
+
+jobs:
+  ios-simulator:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile/world_time
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter analyze
+
+      - name: Build for the iOS Simulator (unsigned — no Apple Developer identity configured)
+        run: flutter build ios --simulator --no-codesign
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WorldTime-iOS-Simulator
+          path: mobile/world_time/build/ios/iphonesimulator/Runner.app
+
+  android-debug:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/world_time
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter analyze
+
+      - name: Build a debug APK (sideloadable, no signing account needed)
+        run: flutter build apk --debug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WorldTime-Android-debug
+          path: mobile/world_time/build/app/outputs/flutter-apk/app-debug.apk

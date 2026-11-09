@@ -1,0 +1,51 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "windows/**"
+      - ".github/workflows/windows.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - "windows/**"
+      - ".github/workflows/windows.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish the screensaver
+        run: >
+          dotnet publish
+          windows\WorldTimeScreensaver\WorldTimeScreensaver\WorldTimeScreensaver.csproj
+          -c Release -r win-x64 --self-contained
+          -o windows\installer\publish
+
+      - name: Upload the .scr + publish output
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorldTimeScreensaver-scr
+          path: windows/installer/publish
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Compile the installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\installer\WorldTimeScreensaver.iss
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorldTimeScreensaverSetup
+          path: windows/installer/output/WorldTimeScreensaverSetup.exe

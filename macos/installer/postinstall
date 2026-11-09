@@ -1,0 +1,24 @@
+#!/bin/bash
+# Copies WorldTimeScreensaver.saver (bundled alongside this script by
+# pkgbuild's --scripts directory) into the logged-in console user's
+# ~/Library/Screen Savers. A per-user path like that can't be expressed as
+# a fixed pkgbuild payload install-location, so this is a scripts-only
+# (--nopayload) package that does the copy itself.
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONSOLE_USER=$(stat -f%Su /dev/console)
+USER_HOME=$(dscl . -read "/Users/$CONSOLE_USER" NFSHomeDirectory | awk '{print $2}')
+
+if [ -z "$USER_HOME" ] || [ ! -d "$USER_HOME" ]; then
+  echo "World Time installer: could not resolve the console user's home directory" >&2
+  exit 1
+fi
+
+DEST_DIR="$USER_HOME/Library/Screen Savers"
+mkdir -p "$DEST_DIR"
+rm -rf "$DEST_DIR/WorldTimeScreensaver.saver"
+cp -R "$SCRIPT_DIR/WorldTimeScreensaver.saver" "$DEST_DIR/"
+chown -R "$CONSOLE_USER" "$DEST_DIR/WorldTimeScreensaver.saver"
+
+exit 0

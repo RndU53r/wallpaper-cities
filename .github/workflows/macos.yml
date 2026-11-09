@@ -1,0 +1,45 @@
+name: macOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "macos/**"
+      - ".github/workflows/macos.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - "macos/**"
+      - ".github/workflows/macos.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build WorldTimeScreensaver.saver
+        run: |
+          xcodebuild \
+            -project macos/WorldTimeScreensaver/WorldTimeScreensaver.xcodeproj \
+            -target WorldTimeScreensaver \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Build the .pkg installer
+        run: macos/installer/build.sh
+
+      - name: Upload .saver
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorldTimeScreensaver-saver
+          path: macos/WorldTimeScreensaver/build/Release/WorldTimeScreensaver.saver
+
+      - name: Upload .pkg installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorldTimeScreensaver-pkg
+          path: macos/installer/build/WorldTimeScreensaver.pkg

@@ -1,5 +1,6 @@
 # macOS / Xcode
 macos/**/build/
+macos/installer/build/
 macos/**/*.xcuserstate
 macos/**/xcuserdata/
 macos/**/DerivedData/
@@ -8,4 +9,27 @@ macos/**/DerivedData/
 # Windows / .NET
 windows/**/bin/
 windows/**/obj/
+windows/installer/publish/
+windows/installer/output/
 *.user
+
+# Flutter / Dart / mobile platform build output
+mobile/world_time/.dart_tool/
+mobile/world_time/.flutter-plugins
+mobile/world_time/.flutter-plugins-dependencies
+mobile/world_time/.packages
+mobile/world_time/build/
+mobile/world_time/ios/Pods/
+mobile/world_time/ios/.symlinks/
+mobile/world_time/ios/Flutter/Flutter.framework
+mobile/world_time/ios/Flutter/Flutter.podspec
+mobile/world_time/ios/Flutter/App.framework
+mobile/world_time/ios/Flutter/flutter_export_environment.sh
+mobile/world_time/ios/Flutter/Generated.xcconfig
+mobile/world_time/ios/Runner/GeneratedPluginRegistrant.*
+mobile/world_time/android/.gradle/
+mobile/world_time/android/local.properties
+mobile/world_time/android/**/GeneratedPluginRegistrant.java
+mobile/world_time/.idea/
+mobile/world_time/*.iml
+
