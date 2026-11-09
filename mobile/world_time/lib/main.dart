@@ -104,10 +104,10 @@ class WorldTimeHome extends StatelessWidget {
     final app = context.watch<AppState>();
     final theme = Theme.of(context);
     final ink = theme.colorScheme.brightness == Brightness.light ? const Color(0xFF16161A) : const Color(0xFFF5F3EE);
-    final inkDim = ink.withOpacity(0.6);
+    final inkDim = ink.withValues(alpha: 0.6);
     final cardTop = theme.colorScheme.brightness == Brightness.light ? Colors.white : const Color(0xFF1C1C1F);
     final cardBottom = theme.colorScheme.brightness == Brightness.light ? const Color(0xFFE3E3E8) : const Color(0xFF0C0C0E);
-    final seam = Colors.black.withOpacity(theme.colorScheme.brightness == Brightness.light ? 0.14 : 0.45);
+    final seam = Colors.black.withValues(alpha: theme.colorScheme.brightness == Brightness.light ? 0.14 : 0.45);
 
     return Scaffold(
       body: LayoutBuilder(
@@ -125,7 +125,7 @@ class WorldTimeHome extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.black.withOpacity(0.35), Colors.transparent, Colors.black.withOpacity(0.55)],
+                    colors: [Colors.black.withValues(alpha: 0.35), Colors.transparent, Colors.black.withValues(alpha: 0.55)],
                     stops: const [0, 0.3, 1],
                   ),
                 ),

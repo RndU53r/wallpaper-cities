@@ -79,12 +79,12 @@ class _Star {
   const _Star(this.x, this.y, this.r, this.tw);
 }
 
-class CityScene {
+class _CityScene {
   final List<_Building> buildings;
   final List<_Blob> blobs;
   final List<_Star> stars;
   final double hueShiftDeg;
-  const CityScene(this.buildings, this.blobs, this.stars, this.hueShiftDeg);
+  const _CityScene(this.buildings, this.blobs, this.stars, this.hueShiftDeg);
 }
 
 int _hashString(String s) {
@@ -112,9 +112,9 @@ class _Rng {
   static int _mul32(int a, int b) => (a * b) & 0xFFFFFFFF;
 }
 
-final Map<String, CityScene> _sceneCache = {};
+final Map<String, _CityScene> _sceneCache = {};
 
-CityScene sceneFor(String tz) {
+_CityScene _sceneFor(String tz) {
   return _sceneCache.putIfAbsent(tz, () {
     final rng = _Rng(_hashString(tz));
     final buildingCount = 12 + (rng.next() * 6).floor();
@@ -137,7 +137,7 @@ CityScene sceneFor(String tz) {
       (_) => _Star(rng.next(), rng.next() * 0.65, 0.5 + rng.next() * 1.1, rng.next() * math.pi * 2),
     );
     final hueShift = (rng.next() - 0.5) * 24;
-    return CityScene(buildings, blobs, stars, hueShift);
+    return _CityScene(buildings, blobs, stars, hueShift);
   });
 }
 
@@ -151,7 +151,7 @@ class SceneBackgroundPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final scene = sceneFor(tz);
+    final scene = _sceneFor(tz);
     final palette = skyPalette(localHourFraction(tz));
     final w = size.width, h = size.height;
     final t = animationSeconds;
@@ -178,7 +178,7 @@ class SceneBackgroundPainter extends CustomPainter {
         canvas.drawCircle(
           Offset(s.x * w, s.y * h),
           s.r,
-          Paint()..color = Colors.white.withOpacity(0.5 * tw * palette.stars),
+          Paint()..color = Colors.white.withValues(alpha: 0.5 * tw * palette.stars),
         );
       }
     }
@@ -190,7 +190,7 @@ class SceneBackgroundPainter extends CustomPainter {
       final warm = 1 - palette.daylight * 0.3;
       final blobColor = warm > 0.5 ? const Color(0xFFFFB482) : Colors.white;
       final rg = Paint()
-        ..shader = RadialGradient(colors: [blobColor.withOpacity(0.16 * (0.4 + warm)), blobColor.withOpacity(0)])
+        ..shader = RadialGradient(colors: [blobColor.withValues(alpha: 0.16 * (0.4 + warm)), blobColor.withValues(alpha: 0)])
             .createShader(Rect.fromCircle(center: Offset(bx, by), radius: r));
       canvas.drawCircle(Offset(bx, by), r, rg);
     }
@@ -205,7 +205,7 @@ class SceneBackgroundPainter extends CustomPainter {
       canvas.drawRect(Rect.fromLTWH(bx, baseY - bh, bw, bh), silhouettePaint);
       if (b.lit && palette.daylight < 0.55) {
         final winAlpha = ((0.55 - palette.daylight) * 1.3).clamp(0.0, 1.0);
-        final winPaint = Paint()..color = const Color(0xFFFFC978).withOpacity(winAlpha);
+        final winPaint = Paint()..color = const Color(0xFFFFC978).withValues(alpha: winAlpha);
         for (var r = 0; r < b.litRows; r++) {
           final wy = baseY - bh + 6 + r * ((bh - 12) / b.litRows);
           for (var c = 2.0; c < bw - 2; c += 7) {

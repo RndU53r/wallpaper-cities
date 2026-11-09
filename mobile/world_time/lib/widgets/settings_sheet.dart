@@ -102,8 +102,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 child: ReorderableListView.builder(
                   scrollController: scrollController,
                   itemCount: app.cities.length,
-                  onReorder: (oldIndex, newIndex) {
-                    if (newIndex > oldIndex) newIndex -= 1;
+                  onReorderItem: (oldIndex, newIndex) {
                     app.reorderCity(oldIndex, newIndex);
                   },
                   itemBuilder: (context, i) {
