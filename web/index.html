@@ -21,6 +21,17 @@
     </div>
     <div class="topbar__right">
       <div class="topbar__date" id="dateLabel"></div>
+      <button class="icon-btn theme-btn" id="themeDayBtn" aria-label="Day theme" title="Day theme">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M12 2.5v2.3M12 19.2v2.3M21.5 12h-2.3M4.8 12H2.5M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2 5.6 5.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="icon-btn theme-btn" id="themeNightBtn" aria-label="Night theme" title="Night theme">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <button class="icon-btn" id="settingsBtn" aria-label="City settings" title="City settings">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="3" y="3" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.4"/>
@@ -61,6 +72,16 @@
           <span class="panel__hero-value" id="heroSourceValue">—</span>
         </div>
         <button class="panel__hero-reset" id="heroResetBtn" hidden>Use automatic</button>
+      </div>
+
+      <div class="panel__hero-row panel__theme-row">
+        <span class="panel__hero-label">Theme</span>
+        <div class="panel__theme-options" id="themeOptions">
+          <button data-mode="auto" title="Light or dark, based on the hero city's current daylight">Auto (daylight)</button>
+          <button data-mode="system" title="Match this device's system appearance setting">System</button>
+          <button data-mode="day">Day</button>
+          <button data-mode="night">Night</button>
+        </div>
       </div>
 
       <div class="panel__search">

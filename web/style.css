@@ -12,6 +12,30 @@
   color-scheme: dark;
 }
 
+/* Light theme — the UI chrome (digit cards, panel, text), not to be
+   confused with each city's own day/night sky palette (that's computed
+   live per city regardless of this). Applied via body[data-theme]; see
+   the Theme module in app.js for when each mode picks light vs dark. */
+body[data-theme="light"] {
+  --ink: #16161a;
+  --ink-dim: rgba(22, 22, 26, 0.62);
+  --ink-faint: rgba(22, 22, 26, 0.38);
+  --card-top: #ffffff;
+  --card-bottom: #e3e3e8;
+  --card-seam: rgba(0, 0, 0, 0.14);
+  --card-edge: rgba(0, 0, 0, 0.07);
+  --accent: #c97a2e;
+  --panel-bg: rgba(255, 255, 255, 0.94);
+  --panel-border: rgba(0, 0, 0, 0.1);
+  color-scheme: light;
+}
+
+body[data-theme="light"] .overlay {
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,0) 0%, rgba(255,255,255,.22) 70%, rgba(255,255,255,.4) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,.06) 22%, rgba(255,255,255,.12) 70%, rgba(255,255,255,.4) 100%);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -370,6 +394,26 @@ html, body {
   white-space: nowrap;
 }
 .panel__hero-reset:hover { background: rgba(255,255,255,.08); color: var(--ink); }
+
+.panel__theme-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+.panel__theme-options { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.panel__theme-options button {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.05);
+  color: var(--ink-dim);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.panel__theme-options button:hover { background: rgba(255,255,255,.1); color: var(--ink); }
+.panel__theme-options button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1206;
+}
 
 .panel__limit-msg {
   margin: 0 0 10px;

@@ -15,6 +15,8 @@
 const CITY_STORAGE_KEY = "worldtime.cities.v2";
 const HERO_OVERRIDE_KEY = "worldtime.heroOverride.v1";
 const MONUMENT_STORAGE_KEY = "worldtime.monuments.v1";
+const THEME_STORAGE_KEY = "worldtime.theme.v1";
+const THEME_MODES = ["auto", "system", "day", "night"];
 const MONUMENT_MAX_DIM = 1600;
 const MONUMENT_JPEG_QUALITY = 0.82;
 const MIN_CITIES = 4;
@@ -205,6 +207,75 @@ window.addEventListener("storage", (e) => {
     const parsed = e.newValue ? JSON.parse(e.newValue) : null;
     Hero._set(parsed ? { ...parsed, source: "manual" } : Hero._deviceTzGuess());
   } catch (_) { /* ignore malformed external write */ }
+});
+
+// ---------------------------------------------------------------------------
+// Theme — the UI chrome's light/dark appearance (distinct from each city's
+// own generated day/night sky, which always varies regardless of this).
+// ---------------------------------------------------------------------------
+
+const Theme = {
+  mode: "auto", // 'auto' (daylight at the hero city) | 'system' | 'day' | 'night'
+
+  init() {
+    this.mode = this._load();
+    this._apply();
+
+    const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)");
+    if (media && media.addEventListener) {
+      media.addEventListener("change", () => { if (this.mode === "system") this._apply(); });
+    }
+
+    Hero.onChange(() => { if (this.mode === "auto") this._apply(); });
+    // Daylight shifts continuously even without a hero change (e.g. dawn
+    // breaking) — recheck periodically rather than only on hero switches.
+    setInterval(() => { if (this.mode === "auto") this._apply(); }, 60 * 1000);
+  },
+
+  _load() {
+    try {
+      const raw = localStorage.getItem(THEME_STORAGE_KEY);
+      return THEME_MODES.includes(raw) ? raw : "auto";
+    } catch (_) { return "auto"; }
+  },
+
+  setMode(mode) {
+    if (!THEME_MODES.includes(mode)) return;
+    this.mode = mode;
+    try { localStorage.setItem(THEME_STORAGE_KEY, mode); } catch (_) {}
+    this._apply();
+    this._notify();
+  },
+
+  _isLight() {
+    switch (this.mode) {
+      case "day": return true;
+      case "night": return false;
+      case "system": {
+        const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)");
+        return media ? media.matches : true;
+      }
+      case "auto":
+      default: {
+        const tz = (Hero.current && Hero.current.tz) || LOCAL_TZ;
+        return skyPalette(localHourFraction(tz)).daylight >= 0.5;
+      }
+    }
+  },
+
+  _apply() {
+    document.body.dataset.theme = this._isLight() ? "light" : "dark";
+  },
+
+  onChange(fn) { (this._listeners = this._listeners || []).push(fn); },
+  _notify() { (this._listeners || []).forEach((fn) => fn(this.mode)); },
+};
+
+window.addEventListener("storage", (e) => {
+  if (e.key !== THEME_STORAGE_KEY) return;
+  Theme.mode = THEME_MODES.includes(e.newValue) ? e.newValue : "auto";
+  Theme._apply();
+  Theme._notify();
 });
 
 // ---------------------------------------------------------------------------
@@ -862,6 +933,7 @@ const Panel = {
     this.heroReset = document.getElementById("heroResetBtn");
     this.monumentInput = document.getElementById("monumentFileInput");
     this.monumentInput.addEventListener("change", () => this._onMonumentFileChosen());
+    this.themeOptions = document.getElementById("themeOptions");
 
     document.getElementById("settingsBtn").addEventListener("click", () => this.open());
     document.getElementById("closePanelBtn").addEventListener("click", () => this.close());
@@ -872,6 +944,17 @@ const Panel = {
     this.search.addEventListener("focus", () => this._onSearch());
 
     this.heroReset.addEventListener("click", () => Hero.setManualOverride(null));
+
+    // Quick direct Day/Night buttons live in the top bar, always visible,
+    // not tucked inside the settings panel.
+    document.getElementById("themeDayBtn").addEventListener("click", () => Theme.setMode("day"));
+    document.getElementById("themeNightBtn").addEventListener("click", () => Theme.setMode("night"));
+
+    this.themeOptions.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => Theme.setMode(btn.dataset.mode));
+    });
+    Theme.onChange(() => this._renderTheme());
+    this._renderTheme();
 
     Cities.onChange(() => this._renderList());
     Hero.onChange(() => { this._renderList(); this._renderHeroRow(); });
@@ -892,6 +975,12 @@ const Panel = {
     const sourceLabel = { manual: "manual", geo: "auto — location", devicetz: "auto — device timezone" }[h.source];
     this.heroValue.textContent = `${h.name} (${sourceLabel})`;
     this.heroReset.hidden = h.source !== "manual";
+  },
+
+  _renderTheme() {
+    this.themeOptions.querySelectorAll("button").forEach((btn) => {
+      btn.setAttribute("aria-pressed", String(btn.dataset.mode === Theme.mode));
+    });
   },
 
   _showLimitMsg(text) {
@@ -1073,6 +1162,7 @@ function main() {
   Hero.init();
   Cities.init();
   Monuments.init();
+  Theme.init();
 
   HeroClock.init();
   Ticker.init();
