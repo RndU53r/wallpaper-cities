@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <!-- Screen.AllScreens is the simplest reliable way to enumerate
+         monitors for a one-full-screen-window-per-display screensaver. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>WorldTimeScreensaver</AssemblyName>
+    <RootNamespace>WorldTimeScreensaver</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The shared Motion UI lives once at the repo root (web/) and is
+         embedded here as-is, so both the macOS and Windows shells always
+         ship the exact same page. -->
+    <None Include="..\..\..\web\**\*.*">
+      <Link>web\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- `dotnet build` produces WorldTimeScreensaver.exe; Windows only treats
+       a screensaver as installable if it has a .scr extension, so mirror
+       the exe to .scr right after build. -->
+  <Target Name="CopyExeToScr" AfterTargets="Build">
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).exe" DestinationFiles="$(OutDir)$(AssemblyName).scr" />
+  </Target>
+
+</Project>

@@ -1,0 +1,11 @@
+# macOS / Xcode
+macos/**/build/
+macos/**/*.xcuserstate
+macos/**/xcuserdata/
+macos/**/DerivedData/
+.DS_Store
+
+# Windows / .NET
+windows/**/bin/
+windows/**/obj/
+*.user

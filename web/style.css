@@ -1,0 +1,541 @@
+:root {
+  --ink: #f5f3ee;
+  --ink-dim: rgba(245, 243, 238, 0.56);
+  --ink-faint: rgba(245, 243, 238, 0.32);
+  --card-top: #1c1c1f;
+  --card-bottom: #0c0c0e;
+  --card-seam: rgba(0, 0, 0, 0.45);
+  --card-edge: rgba(255, 255, 255, 0.08);
+  --accent: #ffb765;
+  --panel-bg: rgba(14, 14, 16, 0.92);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* No background here: the browser propagates an html/body background to
+     the viewport canvas, which paints beneath every element regardless of
+     z-index — it would hide the fixed, negative-z-index #scene canvas. The
+     canvas (and .overlay) provide all background color instead. */
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 800;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  display: block;
+  background: #0a0a0c; /* avoids a flash of white before the first draw */
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 70%, rgba(0,0,0,.6) 100%),
+    linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.12) 22%, rgba(0,0,0,.2) 70%, rgba(0,0,0,.6) 100%);
+  pointer-events: none;
+}
+
+/* ---------- Top bar ---------- */
+
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(16px, 2.4vh, 30px) clamp(20px, 3vw, 44px);
+  z-index: 5;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: 0.22em;
+  font-size: clamp(12px, 1.1vw, 15px);
+  color: var(--ink);
+  opacity: 0.92;
+}
+
+.brand__mark { width: 20px; height: 20px; color: var(--ink); opacity: 0.85; }
+
+.topbar__right { display: flex; align-items: center; gap: 16px; }
+
+.topbar__date {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-size: clamp(11px, 1vw, 14px);
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}
+
+.icon-btn {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  color: var(--ink);
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background .15s, transform .15s;
+}
+.icon-btn svg { width: 16px; height: 16px; }
+.icon-btn:hover { background: rgba(255,255,255,.14); }
+.icon-btn:active { transform: scale(.92); }
+
+/* ---------- Hero clock ---------- */
+
+.hero {
+  position: fixed;
+  /* Reserved top/bottom bands keep hero content clear of the topbar and the
+     ticker at any viewport height, instead of centering across the full
+     viewport and risking the label/clock clipping under the topbar. */
+  top: clamp(64px, 10vh, 110px);
+  left: 0; right: 0;
+  bottom: clamp(110px, 16vh, 170px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1.2vh, 14px);
+  text-align: center;
+}
+
+.hero__label {
+  font-size: clamp(11px, 1vw, 14px);
+  letter-spacing: 0.3em;
+  color: var(--ink-dim);
+  font-weight: 700;
+}
+
+.hero__clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* ---------- Flip digit ---------- */
+
+.flip-group { display: flex; align-items: flex-end; }
+.flip-sep {
+  font-size: clamp(44px, 9vw, 128px);
+  color: var(--ink-faint);
+  width: 0.5em;
+  text-align: center;
+  transform: translateY(-0.06em);
+}
+.flip-seg-gap { width: clamp(10px, 1.2vw, 20px); }
+
+.flip {
+  position: relative;
+  display: inline-block;
+  width: clamp(42px, 7.4vw, 104px);
+  height: clamp(68px, 11.6vw, 164px);
+  margin: 0 clamp(2px, 0.3vw, 6px);
+  border-radius: clamp(6px, 0.6vw, 12px);
+  background: linear-gradient(180deg, var(--card-top), var(--card-bottom));
+  box-shadow:
+    inset 0 1px 0 var(--card-edge),
+    0 10px 24px rgba(0,0,0,.35);
+  overflow: hidden;
+  /* A generous perspective distance keeps the fold reading as a subtle
+     hinge rather than a skewed/distorted card — too short a distance here
+     is what made the cell's bounding box look skewed. */
+  perspective: 480px;
+}
+
+.flip::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 2px;
+  background: var(--card-seam);
+  transform: translateY(-1px);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Split-flap digit: two static backdrop halves (always the settled, new
+   value) plus two animated flaps (the outgoing top half folding away, the
+   incoming bottom half folding into place). Each half is clipped to its
+   own box so nothing ever renders past the digit cell, even mid-fold. */
+
+.flip__half,
+.flip__flap {
+  position: absolute;
+  left: 0; right: 0;
+  height: 50%;
+  overflow: hidden;
+}
+
+.flip__half--top { top: 0; }
+.flip__half--bottom { bottom: 0; }
+
+.flip__flap { z-index: 2; }
+.flip__flap--top {
+  top: 0;
+  transform-origin: 50% 100%; /* hinge = the cell's midline */
+}
+.flip__flap--bottom {
+  bottom: 0;
+  transform-origin: 50% 0%; /* hinge = the cell's midline */
+}
+
+.flip__char {
+  position: absolute;
+  left: 0; right: 0;
+  /* 200% of a 50%-tall parent = 100% of the full cell: the glyph is laid
+     out and centered as if the cell weren't split at all, and simply gets
+     clipped to the correct half by its parent. */
+  height: 200%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(42px, 8.4vw, 124px);
+  font-weight: 900;
+  letter-spacing: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  backface-visibility: hidden;
+}
+.flip__half--top .flip__char,
+.flip__flap--top .flip__char { top: 0; }
+.flip__half--bottom .flip__char,
+.flip__flap--bottom .flip__char { bottom: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flip__flap { transition: opacity 150ms linear !important; transform: none !important; }
+}
+
+/* ---------- City ticker ---------- */
+
+.ticker {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  padding: clamp(14px, 2.4vh, 26px) 0 clamp(22px, 3.4vh, 38px);
+  overflow: hidden;
+  z-index: 4;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+}
+
+.ticker__track {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(28px, 3.6vw, 56px);
+  width: max-content;
+  will-change: transform;
+}
+
+.city-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: max-content;
+}
+
+.city-tile__name {
+  font-size: clamp(10px, 0.95vw, 13px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-weight: 700;
+}
+
+.city-tile__time {
+  font-size: clamp(20px, 2.6vw, 34px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.city-tile__time .city-tile__meridiem {
+  font-size: 0.5em;
+  color: var(--ink-dim);
+  margin-left: 2px;
+}
+
+/* ---------- Scene caption ---------- */
+
+.scene-caption {
+  position: fixed;
+  left: clamp(20px, 3vw, 44px);
+  bottom: clamp(96px, 13vh, 150px);
+  z-index: 4;
+  font-size: clamp(11px, 1vw, 14px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-weight: 700;
+  transition: opacity .6s ease;
+}
+
+/* ---------- Settings panel ---------- */
+
+.panel {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(6px);
+}
+
+.panel__card {
+  width: min(480px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.5);
+}
+
+.panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.panel__header h2 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.panel__hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+}
+.panel__hero-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.panel__hero-label {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+.panel__hero-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.panel__hero-reset {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.18);
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.panel__hero-reset:hover { background: rgba(255,255,255,.08); color: var(--ink); }
+
+.panel__limit-msg {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+}
+
+.panel__search { position: relative; margin-bottom: 12px; }
+.panel__search input {
+  width: 100%;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+}
+.panel__search input:focus { border-color: var(--accent); }
+
+.panel__results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #161618;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 10px;
+  z-index: 2;
+}
+.panel__result {
+  padding: 9px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.panel__result:hover { background: rgba(255,255,255,.08); }
+.panel__result .tz { color: var(--ink-dim); font-weight: 500; margin-left: 6px; }
+
+.panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 9px 9px 6px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.04);
+}
+.panel__item-handle {
+  color: var(--ink-faint);
+  font-size: 14px;
+  padding: 2px 4px;
+  cursor: grab;
+  user-select: none;
+}
+.panel__item-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.panel__item-reorder button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 4px;
+}
+.panel__item-reorder button:disabled { opacity: 0.25; cursor: default; }
+.panel__item-reorder button:not(:disabled):hover { background: rgba(255,255,255,.1); color: var(--ink); }
+
+.panel__item-label { flex: 1; min-width: 0; }
+.panel__item-name { font-size: 13.5px; font-weight: 700; }
+.panel__item-tz { font-size: 11.5px; color: var(--ink-dim); font-weight: 500; margin-left: 8px; }
+.panel__item-remove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.panel__item-remove:hover:not(:disabled) { background: rgba(255,80,80,.18); color: #ff8a8a; }
+.panel__item-remove:disabled { opacity: 0.25; cursor: default; }
+
+.panel__item-monument {
+  appearance: none;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.18);
+  background-color: rgba(255,255,255,.06);
+  background-size: cover;
+  background-position: center;
+  color: var(--ink-dim);
+  font-size: 13px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.panel__item-monument:hover { border-color: rgba(255,255,255,.35); }
+.panel__item-monument--set { color: transparent; }
+.panel__item-monument-remove {
+  font-size: 12px;
+  width: 20px;
+  margin-right: -2px;
+}
+
+.panel__hint {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+[hidden] { display: none !important; }
+
+/* ---------- Configure-sheet mode (native "settings" window) ---------- */
+/* The native shells open this same page with #configure in a small plain
+   window instead of building a second settings UI — just the city editor,
+   no wallpaper chrome around it. */
+
+body.configure-mode .topbar,
+body.configure-mode .hero,
+body.configure-mode .ticker,
+body.configure-mode .scene-caption {
+  display: none;
+}
+
+body.configure-mode .panel {
+  position: static;
+  width: 100%;
+  height: 100%;
+  background: #0e0e10;
+  backdrop-filter: none;
+}
+
+body.configure-mode .panel__card {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  border: none;
+}
+
+/* The native window's own close button/title bar replaces this one. */
+body.configure-mode #closePanelBtn { display: none; }

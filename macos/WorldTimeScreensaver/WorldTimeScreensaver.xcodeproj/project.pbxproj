@@ -1,0 +1,262 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1A00000000000000000020 /* WorldTimeScreenSaverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00000000000000000010 /* WorldTimeScreenSaverView.swift */; };
+		1A00000000000000000021 /* ConfigureWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A00000000000000000011 /* ConfigureWindowController.swift */; };
+		1A00000000000000000022 /* web in Resources */ = {isa = PBXBuildFile; fileRef = 1A00000000000000000013 /* web */; };
+		1A00000000000000000023 /* ScreenSaver.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A00000000000000000014 /* ScreenSaver.framework */; };
+		1A00000000000000000024 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A00000000000000000015 /* WebKit.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1A00000000000000000003 /* WorldTimeScreensaver.saver */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WorldTimeScreensaver.saver; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A00000000000000000010 /* WorldTimeScreenSaverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldTimeScreenSaverView.swift; sourceTree = "<group>"; };
+		1A00000000000000000011 /* ConfigureWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureWindowController.swift; sourceTree = "<group>"; };
+		1A00000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1A00000000000000000013 /* web */ = {isa = PBXFileReference; lastKnownFileType = folder; name = web; path = ../../web; sourceTree = SOURCE_ROOT; };
+		1A00000000000000000014 /* ScreenSaver.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenSaver.framework; path = System/Library/Frameworks/ScreenSaver.framework; sourceTree = SDKROOT; };
+		1A00000000000000000015 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1A00000000000000000032 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A00000000000000000023 /* ScreenSaver.framework in Frameworks */,
+				1A00000000000000000024 /* WebKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1A00000000000000000004 /* (project root) */ = {
+			isa = PBXGroup;
+			children = (
+				1A00000000000000000006 /* WorldTimeScreensaver */,
+				1A00000000000000000007 /* Frameworks */,
+				1A00000000000000000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1A00000000000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1A00000000000000000003 /* WorldTimeScreensaver.saver */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1A00000000000000000006 /* WorldTimeScreensaver */ = {
+			isa = PBXGroup;
+			children = (
+				1A00000000000000000010 /* WorldTimeScreenSaverView.swift */,
+				1A00000000000000000011 /* ConfigureWindowController.swift */,
+				1A00000000000000000012 /* Info.plist */,
+				1A00000000000000000013 /* web */,
+			);
+			path = WorldTimeScreensaver;
+			sourceTree = "<group>";
+		};
+		1A00000000000000000007 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1A00000000000000000014 /* ScreenSaver.framework */,
+				1A00000000000000000015 /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1A00000000000000000002 /* WorldTimeScreensaver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A00000000000000000050 /* Build configuration list for PBXNativeTarget "WorldTimeScreensaver" */;
+			buildPhases = (
+				1A00000000000000000030 /* Sources */,
+				1A00000000000000000032 /* Frameworks */,
+				1A00000000000000000031 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WorldTimeScreensaver;
+			productName = WorldTimeScreensaver;
+			productReference = 1A00000000000000000003 /* WorldTimeScreensaver.saver */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1A00000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					1A00000000000000000002 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 1A00000000000000000040 /* Build configuration list for PBXProject "WorldTimeScreensaver" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 1A00000000000000000004;
+			productRefGroup = 1A00000000000000000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1A00000000000000000002 /* WorldTimeScreensaver */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A00000000000000000031 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A00000000000000000022 /* web in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1A00000000000000000030 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A00000000000000000020 /* WorldTimeScreenSaverView.swift in Sources */,
+				1A00000000000000000021 /* ConfigureWindowController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1A00000000000000000041 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		1A00000000000000000042 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		1A00000000000000000051 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WorldTimeScreensaver/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.worldtime.screensaver";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = saver;
+			};
+			name = Debug;
+		};
+		1A00000000000000000052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WorldTimeScreensaver/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.worldtime.screensaver";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = saver;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1A00000000000000000040 /* Build configuration list for PBXProject "WorldTimeScreensaver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A00000000000000000041 /* Debug */,
+				1A00000000000000000042 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1A00000000000000000050 /* Build configuration list for PBXNativeTarget "WorldTimeScreensaver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A00000000000000000051 /* Debug */,
+				1A00000000000000000052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1A00000000000000000001 /* Project object */;
+}
