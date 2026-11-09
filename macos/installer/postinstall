@@ -4,7 +4,14 @@
 # ~/Library/Screen Savers. A per-user path like that can't be expressed as
 # a fixed pkgbuild payload install-location, so this is a scripts-only
 # (--nopayload) package that does the copy itself.
-set -e
+#
+# installd runs this script as root, over a path tree the console user can
+# write to. Every privileged operation below is guarded against following a
+# symlink, so a console user can't pre-plant e.g.
+# `~/Library/Screen Savers -> /Library/LaunchDaemons` ahead of time and have
+# this script copy/chown root-created content into a sensitive system
+# directory on their behalf (CWE-61).
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONSOLE_USER=$(stat -f%Su /dev/console)
@@ -15,10 +22,28 @@ if [ -z "$USER_HOME" ] || [ ! -d "$USER_HOME" ]; then
   exit 1
 fi
 
-DEST_DIR="$USER_HOME/Library/Screen Savers"
+LIBRARY_DIR="$USER_HOME/Library"
+DEST_DIR="$LIBRARY_DIR/Screen Savers"
+SAVER_DEST="$DEST_DIR/WorldTimeScreensaver.saver"
+
+# -L is true for an existing symlink regardless of its target (even a
+# dangling one), so this catches a pre-planted link either way.
+refuse_if_symlink() {
+  if [ -L "$1" ]; then
+    echo "World Time installer: refusing to continue — '$1' is a symlink" >&2
+    exit 1
+  fi
+}
+
+refuse_if_symlink "$LIBRARY_DIR"
+refuse_if_symlink "$DEST_DIR"
 mkdir -p "$DEST_DIR"
-rm -rf "$DEST_DIR/WorldTimeScreensaver.saver"
+refuse_if_symlink "$DEST_DIR"      # mkdir -p is a no-op on an already-existing path — re-check.
+
+refuse_if_symlink "$SAVER_DEST"
+rm -rf "$SAVER_DEST"
 cp -R "$SCRIPT_DIR/WorldTimeScreensaver.saver" "$DEST_DIR/"
-chown -R "$CONSOLE_USER" "$DEST_DIR/WorldTimeScreensaver.saver"
+refuse_if_symlink "$SAVER_DEST"    # verify once more before the privileged chown below.
+chown -R "$CONSOLE_USER" "$SAVER_DEST"
 
 exit 0
