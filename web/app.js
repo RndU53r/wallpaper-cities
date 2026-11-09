@@ -607,44 +607,72 @@ const Ticker = {
   speedPxPerSec: 26,
   offset: 0,
   lastTs: null,
+  scrolling: false,
 
   init() {
+    this.container = document.getElementById("ticker");
     this.track = document.getElementById("tickerTrack");
     Cities.onChange(() => this.rebuild());
     Hero.onChange(() => this.rebuild());
+    // ResizeObserver reacts to the container's actual box size changing for
+    // any reason (window resize, display change, zoom) — more reliable
+    // than the `resize` event, which some hosts don't dispatch for every
+    // cause of a size change.
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => this.rebuild()).observe(this.container);
+    } else {
+      window.addEventListener("resize", () => this.rebuild());
+    }
     this.rebuild();
     requestAnimationFrame((ts) => this._raf(ts));
   },
 
-  rebuild() {
-    this.track.innerHTML = "";
-    this.tiles = [];
-    const cities = Cities.visibleList();
-    if (!cities.length) return;
-    // Render the list twice back-to-back for a seamless scrolling loop.
-    for (let copy = 0; copy < 2; copy++) {
-      cities.forEach((city) => {
-        const tile = document.createElement("div");
-        tile.className = "city-tile";
-        const name = document.createElement("div");
-        name.className = "city-tile__name";
-        name.textContent = city.name;
-        const time = document.createElement("div");
-        time.className = "city-tile__time";
-        tile.appendChild(name);
-        tile.appendChild(time);
-        this.track.appendChild(tile);
-        this.tiles.push({ tz: city.tz, timeEl: time });
-      });
-    }
-    this.offset = 0;
-    this.track.style.transform = "translateX(0px)";
-    this._measure();
+  _buildTile(city) {
+    const tile = document.createElement("div");
+    tile.className = "city-tile";
+    const name = document.createElement("div");
+    name.className = "city-tile__name";
+    name.textContent = city.name;
+    const time = document.createElement("div");
+    time.className = "city-tile__time";
+    tile.appendChild(name);
+    tile.appendChild(time);
+    this.tiles.push({ tz: city.tz, timeEl: time });
+    return tile;
   },
 
-  _measure() {
+  rebuild() {
+    const cities = Cities.visibleList();
+    this.track.innerHTML = "";
+    this.tiles = [];
+    this.offset = 0;
+    this.track.style.transform = "translateX(0px)";
+    this.scrolling = false;
+    this.container.classList.remove("ticker--static");
+
+    if (!cities.length) { this.halfWidth = null; return; }
+
+    // Render one pass first and measure it — only duplicate (for a
+    // seamless scrolling loop) and animate if that single pass is wider
+    // than the visible strip; otherwise it fits, so just show it once,
+    // centered, standing still.
+    cities.forEach((city) => this.track.appendChild(this._buildTile(city)));
+
     requestAnimationFrame(() => {
-      this.halfWidth = this.track.scrollWidth / 2 || 1;
+      const singlePassWidth = this.track.scrollWidth;
+      const containerWidth = this.container.clientWidth;
+
+      if (singlePassWidth <= containerWidth) {
+        this.container.classList.add("ticker--static");
+        this.halfWidth = null;
+        return;
+      }
+
+      cities.forEach((city) => this.track.appendChild(this._buildTile(city)));
+      this.scrolling = true;
+      requestAnimationFrame(() => {
+        this.halfWidth = this.track.scrollWidth / 2 || 1;
+      });
     });
   },
 
@@ -657,7 +685,7 @@ const Ticker = {
     const dt = (ts - this.lastTs) / 1000;
     this.lastTs = ts;
 
-    if (this.halfWidth) {
+    if (this.scrolling && this.halfWidth) {
       this.offset -= this.speedPxPerSec * dt;
       if (-this.offset >= this.halfWidth) this.offset += this.halfWidth;
       this.track.style.transform = `translateX(${this.offset}px)`;

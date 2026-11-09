@@ -271,6 +271,16 @@ html, body {
   will-change: transform;
 }
 
+/* When every city fits in one pass, the ticker shows it once, centered,
+   standing still, instead of duplicating and scrolling needlessly. */
+.ticker--static {
+  display: flex;
+  justify-content: center;
+}
+.ticker--static .ticker__track {
+  transform: none !important;
+}
+
 .city-tile {
   display: flex;
   flex-direction: column;
