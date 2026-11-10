@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -118,8 +120,12 @@ class WorldTimeHome extends StatelessWidget {
           return Stack(
             fit: StackFit.expand,
             children: [
-              // Generative, per-city, day/night-aware background.
-              _AnimatedScene(tz: app.hero.tz),
+              // The hero city's own landmark photo if the user added one,
+              // else the generative, per-city, day/night-aware background.
+              if (app.monumentPhotos[app.hero.tz] case final path?)
+                Image.file(File(path), fit: BoxFit.cover, key: ValueKey(path))
+              else
+                _AnimatedScene(tz: app.hero.tz),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

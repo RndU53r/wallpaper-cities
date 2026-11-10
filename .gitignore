@@ -1,3 +1,6 @@
+# web/ test tooling (vitest + jsdom) — dev-only, not part of the shipped app
+web/node_modules/
+
 # macOS / Xcode
 macos/**/build/
 macos/installer/build/

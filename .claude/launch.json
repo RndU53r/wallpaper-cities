@@ -4,8 +4,8 @@
     {
       "name": "web-preview",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8743", "--directory", "web"],
-      "port": 8743
+      "runtimeArgs": ["web/dev-server.py"],
+      "port": 8755
     }
   ]
 }

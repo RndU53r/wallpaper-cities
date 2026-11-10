@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../data/cities_db.dart';
@@ -31,6 +34,42 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   void _showMessage(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), duration: const Duration(seconds: 3)));
+  }
+
+  Future<void> _onMonumentTap(AppState app, CityEntry city) async {
+    final hasPhoto = app.monumentPhotos.containsKey(city.tz);
+    final action = hasPhoto
+        ? await showModalBottomSheet<String>(
+            context: context,
+            builder: (context) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.photo_outlined),
+                    title: const Text('Change photo'),
+                    onTap: () => Navigator.of(context).pop('change'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline),
+                    title: const Text('Remove photo'),
+                    onTap: () => Navigator.of(context).pop('remove'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : 'change';
+
+    if (!mounted || action == null) return;
+    if (action == 'remove') {
+      app.removeMonumentPhoto(city.tz);
+      return;
+    }
+
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1600);
+    if (picked == null) return;
+    await app.setMonumentPhoto(city.tz, picked.path);
   }
 
   @override
@@ -98,6 +137,19 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   ),
                 ),
               const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.photo_camera_outlined, size: 14, color: theme.colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Tap the camera icon on a city to add your own landmark photo — it replaces the generated skyline.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Expanded(
                 child: ReorderableListView.builder(
                   scrollController: scrollController,
@@ -108,6 +160,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   itemBuilder: (context, i) {
                     final city = app.cities[i];
                     final atMin = app.cities.length <= AppState.minCities;
+                    final monumentPath = app.monumentPhotos[city.tz];
                     return ListTile(
                       key: ValueKey(city.tz),
                       dense: true,
@@ -117,6 +170,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            icon: monumentPath != null
+                                ? CircleAvatar(radius: 11, backgroundImage: FileImage(File(monumentPath)))
+                                : Icon(Icons.photo_camera_outlined, size: 20, color: theme.colorScheme.primary),
+                            tooltip: monumentPath != null ? 'Change landmark photo' : 'Add a landmark photo',
+                            onPressed: () => _onMonumentTap(app, city),
+                          ),
                           IconButton(
                             icon: const Icon(Icons.star_outline, size: 20),
                             tooltip: 'Set as hero city',

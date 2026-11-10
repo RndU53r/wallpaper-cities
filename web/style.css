@@ -7,8 +7,26 @@
   --card-seam: rgba(0, 0, 0, 0.45);
   --card-edge: rgba(255, 255, 255, 0.08);
   --accent: #ffb765;
+  /* Background/text for a *filled* accent pill (the selected theme button).
+     Kept separate from --accent because the light-theme accent, used as a
+     fill with near-black text, measures a borderline ~4:1 contrast ratio —
+     legible but the two colors read as "muddy" against each other. These
+     are tuned per-theme specifically for fill+text pairing. */
+  --accent-pill-bg: var(--accent);
+  --accent-pill-ink: #1a1206;
   --panel-bg: rgba(14, 14, 16, 0.92);
   --panel-border: rgba(255, 255, 255, 0.1);
+  /* Theme-aware UI-chrome overlays: a light wash on the dark theme's dark
+     surfaces, flipped to a dark wash on the light theme's light surfaces.
+     Every chip/input/row fill and border in the panel goes through these
+     instead of a hardcoded rgba(255,255,255,…), which would nearly
+     disappear once the light theme's own background is already white. */
+  --chip-bg: rgba(255, 255, 255, 0.05);
+  --chip-bg-hover: rgba(255, 255, 255, 0.1);
+  --chip-border: rgba(255, 255, 255, 0.14);
+  --chip-border-strong: rgba(255, 255, 255, 0.18);
+  --surface: #161618;
+  --surface-hover: rgba(255, 255, 255, 0.08);
   color-scheme: dark;
 }
 
@@ -25,8 +43,16 @@ body[data-theme="light"] {
   --card-seam: rgba(0, 0, 0, 0.14);
   --card-edge: rgba(0, 0, 0, 0.07);
   --accent: #c97a2e;
+  --accent-pill-bg: #9c5c1c;
+  --accent-pill-ink: #fff8f0;
   --panel-bg: rgba(255, 255, 255, 0.94);
   --panel-border: rgba(0, 0, 0, 0.1);
+  --chip-bg: rgba(0, 0, 0, 0.035);
+  --chip-bg-hover: rgba(0, 0, 0, 0.07);
+  --chip-border: rgba(0, 0, 0, 0.12);
+  --chip-border-strong: rgba(0, 0, 0, 0.2);
+  --surface: #ffffff;
+  --surface-hover: rgba(0, 0, 0, 0.05);
   color-scheme: light;
 }
 
@@ -111,8 +137,8 @@ html, body {
 
 .icon-btn {
   appearance: none;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.06);
+  border: 1px solid var(--chip-border-strong);
+  background: var(--chip-bg);
   color: var(--ink);
   width: 34px; height: 34px;
   border-radius: 9px;
@@ -123,7 +149,7 @@ html, body {
   transition: background .15s, transform .15s;
 }
 .icon-btn svg { width: 16px; height: 16px; }
-.icon-btn:hover { background: rgba(255,255,255,.14); }
+.icon-btn:hover { background: var(--chip-bg-hover); }
 .icon-btn:active { transform: scale(.92); }
 
 /* ---------- Hero clock ---------- */
@@ -372,8 +398,8 @@ html, body {
   padding: 10px 12px;
   margin-bottom: 12px;
   border-radius: 10px;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.1);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
 }
 .panel__hero-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .panel__hero-label {
@@ -393,7 +419,7 @@ html, body {
 }
 .panel__hero-reset {
   appearance: none;
-  border: 1px solid rgba(255,255,255,.18);
+  border: 1px solid var(--chip-border-strong);
   background: transparent;
   color: var(--ink-dim);
   font-size: 11.5px;
@@ -403,14 +429,14 @@ html, body {
   cursor: pointer;
   white-space: nowrap;
 }
-.panel__hero-reset:hover { background: rgba(255,255,255,.08); color: var(--ink); }
+.panel__hero-reset:hover { background: var(--surface-hover); color: var(--ink); }
 
 .panel__theme-row { align-items: flex-start; flex-direction: column; gap: 8px; }
 .panel__theme-options { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .panel__theme-options button {
   appearance: none;
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(255,255,255,.05);
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
   color: var(--ink-dim);
   font-size: 11.5px;
   font-weight: 700;
@@ -418,11 +444,11 @@ html, body {
   border-radius: 7px;
   cursor: pointer;
 }
-.panel__theme-options button:hover { background: rgba(255,255,255,.1); color: var(--ink); }
+.panel__theme-options button:hover { background: var(--chip-bg-hover); color: var(--ink); }
 .panel__theme-options button[aria-pressed="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #1a1206;
+  background: var(--accent-pill-bg);
+  border-color: var(--accent-pill-bg);
+  color: var(--accent-pill-ink);
 }
 
 .panel__limit-msg {
@@ -436,8 +462,8 @@ html, body {
 .panel__search { position: relative; margin-bottom: 12px; }
 .panel__search input {
   width: 100%;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.14);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
   color: var(--ink);
   border-radius: 10px;
   padding: 11px 13px;
@@ -453,18 +479,24 @@ html, body {
   left: 0; right: 0;
   max-height: 220px;
   overflow-y: auto;
-  background: #161618;
-  border: 1px solid rgba(255,255,255,.14);
+  /* Opaque --surface (not --panel-bg, which carries alpha) so result text
+     always has a solid, correctly-themed backdrop — this was previously a
+     hardcoded dark color that left light-theme result text (dark ink on a
+     dark chip) effectively invisible. */
+  background: var(--surface);
+  border: 1px solid var(--chip-border);
   border-radius: 10px;
   z-index: 2;
+  box-shadow: 0 14px 30px rgba(0,0,0,.25);
 }
 .panel__result {
   padding: 9px 13px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  color: var(--ink);
 }
-.panel__result:hover { background: rgba(255,255,255,.08); }
+.panel__result:hover { background: var(--surface-hover); }
 .panel__result .tz { color: var(--ink-dim); font-weight: 500; margin-left: 6px; }
 
 .panel__list {
@@ -485,7 +517,7 @@ html, body {
   gap: 6px;
   padding: 9px 9px 9px 6px;
   border-radius: 9px;
-  background: rgba(255,255,255,.04);
+  background: var(--chip-bg);
 }
 .panel__item-handle {
   color: var(--ink-faint);
@@ -533,21 +565,25 @@ html, body {
 .panel__item-monument {
   appearance: none;
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 7px;
-  border: 1px solid rgba(255,255,255,.18);
-  background-color: rgba(255,255,255,.06);
+  /* An accent-tinted border (vs. the neutral --chip-border other chrome
+     buttons use) sets this apart as the one button in the row that opens a
+     file picker, rather than blending in as more list-item chrome. */
+  border: 1px solid var(--accent);
+  background-color: var(--chip-bg);
   background-size: cover;
   background-position: center;
-  color: var(--ink-dim);
-  font-size: 13px;
+  color: var(--accent);
   cursor: pointer;
   display: grid;
   place-items: center;
 }
-.panel__item-monument:hover { border-color: rgba(255,255,255,.35); }
-.panel__item-monument--set { color: transparent; }
+.panel__item-monument svg { width: 15px; height: 15px; }
+.panel__item-monument:hover { background-color: var(--chip-bg-hover); }
+.panel__item-monument--set { border-color: var(--chip-border); }
+.panel__item-monument--set svg { display: none; }
 .panel__item-monument-remove {
   font-size: 12px;
   width: 20px;

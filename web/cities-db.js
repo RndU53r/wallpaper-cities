@@ -206,7 +206,50 @@ function nearestCity(lat, lon) {
   return best ? { ...best, distanceKm: bestDist } : null;
 }
 
+/**
+ * Legacy IANA zone identifiers ("backward" links in the tzdata) that some
+ * OS/ICU builds still hand back from Intl.DateTimeFormat().resolvedOptions()
+ * instead of the canonical name — e.g. a device in Delhi can report
+ * "Asia/Calcutta" rather than "Asia/Kolkata". Both identify the exact same
+ * zone (DST rules, offset, everything) and CITIES_DB only lists the
+ * canonical form, so without this map a device reporting the legacy alias
+ * would silently miss the curated entry and fall back to a raw string
+ * label ("Calcutta" instead of "Delhi") even though the zone is supported.
+ */
+const TZ_ALIASES = {
+  "Asia/Calcutta": "Asia/Kolkata",
+  "Asia/Katmandu": "Asia/Kathmandu",
+  "Asia/Saigon": "Asia/Ho_Chi_Minh",
+  "Asia/Rangoon": "Asia/Yangon",
+  "Asia/Dacca": "Asia/Dhaka",
+  "Asia/Thimbu": "Asia/Thimphu",
+  "Asia/Ujung_Pandang": "Asia/Makassar",
+  "Asia/Macao": "Asia/Macau",
+  "Asia/Tel_Aviv": "Asia/Jerusalem",
+  "Asia/Chungking": "Asia/Shanghai",
+  "Europe/Kiev": "Europe/Kyiv",
+  "America/Buenos_Aires": "America/Argentina/Buenos_Aires",
+  "America/Indianapolis": "America/Indiana/Indianapolis",
+  "US/Eastern": "America/New_York",
+  "US/Central": "America/Chicago",
+  "US/Mountain": "America/Denver",
+  "US/Pacific": "America/Los_Angeles",
+  "US/Arizona": "America/Phoenix",
+  "US/Alaska": "America/Anchorage",
+  "US/Hawaii": "Pacific/Honolulu",
+  "Europe/Belfast": "Europe/London",
+  "Africa/Asmera": "Africa/Asmara",
+};
+
 /** Dataset entry for an IANA zone, if one is curated (for display-name overrides). */
 function cityForTimeZone(tz) {
-  return CITIES_DB.find((c) => c.tz === tz) || null;
+  return CITIES_DB.find((c) => c.tz === tz) || CITIES_DB.find((c) => c.tz === TZ_ALIASES[tz]) || null;
+}
+
+// Browsers load this file as a plain <script> (no `module` global), where
+// everything above just becomes a global as usual. Node's test runner
+// instead `require()`s this file directly — exporting here, guarded so it's
+// a no-op in the browser, is what makes that possible without a bundler.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { CITIES_DB, TZ_ALIASES, haversineKm, nearestCity, cityForTimeZone };
 }

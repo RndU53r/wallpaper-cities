@@ -28,6 +28,17 @@ const GEO_RECHECK_MS = 5 * 60 * 1000; // re-evaluate for travel every 5 minutes
 
 const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
+// Browsers load cities-db.js first via its own <script> tag, so
+// CITIES_DB/cityForTimeZone/nearestCity are already on the global scope by
+// the time this file runs. Node's test runner `require()`s this file on its
+// own, so pull them in explicitly here — a no-op in the browser, where
+// `require` doesn't exist, and the `var` below doesn't clobber the
+// already-set global (re-declaring a `var` without an initializer never
+// resets an existing value).
+if (typeof require === "function" && typeof module !== "undefined") {
+  var { cityForTimeZone, nearestCity } = require("./cities-db.js");
+}
+
 // ---------------------------------------------------------------------------
 // Small utilities
 // ---------------------------------------------------------------------------
@@ -635,6 +646,12 @@ const Ticker = {
     name.textContent = city.name;
     const time = document.createElement("div");
     time.className = "city-tile__time";
+    // Set immediately rather than waiting for the next tickClocks() pass —
+    // left blank, a freshly built tile (in particular the second,
+    // scrolling-duplicate pass below, built after main()'s one synchronous
+    // tickClocks() call already ran) would render with no time text until
+    // the next clock-aligned tick, up to a second later.
+    time.textContent = hhmm(city.tz);
     tile.appendChild(name);
     tile.appendChild(time);
     this.tiles.push({ tz: city.tz, timeEl: time });
@@ -652,28 +669,26 @@ const Ticker = {
 
     if (!cities.length) { this.halfWidth = null; return; }
 
-    // Render one pass first and measure it — only duplicate (for a
-    // seamless scrolling loop) and animate if that single pass is wider
-    // than the visible strip; otherwise it fits, so just show it once,
-    // centered, standing still.
+    // Render one pass and measure it synchronously (reading scrollWidth
+    // forces the layout the browser would otherwise defer to the next
+    // frame) — deciding static-vs-scrolling before this rebuild's first
+    // paint, rather than a frame later via requestAnimationFrame, is what
+    // avoids a visible left-aligned-then-centered snap for the static case.
     cities.forEach((city) => this.track.appendChild(this._buildTile(city)));
 
-    requestAnimationFrame(() => {
-      const singlePassWidth = this.track.scrollWidth;
-      const containerWidth = this.container.clientWidth;
+    const singlePassWidth = this.track.scrollWidth;
+    const containerWidth = this.container.clientWidth;
 
-      if (singlePassWidth <= containerWidth) {
-        this.container.classList.add("ticker--static");
-        this.halfWidth = null;
-        return;
-      }
+    if (singlePassWidth <= containerWidth) {
+      this.container.classList.add("ticker--static");
+      this.halfWidth = null;
+      return;
+    }
 
-      cities.forEach((city) => this.track.appendChild(this._buildTile(city)));
-      this.scrolling = true;
-      requestAnimationFrame(() => {
-        this.halfWidth = this.track.scrollWidth / 2 || 1;
-      });
-    });
+    // Duplicate the pass for a seamless scrolling loop.
+    cities.forEach((city) => this.track.appendChild(this._buildTile(city)));
+    this.scrolling = true;
+    this.halfWidth = this.track.scrollWidth / 2 || 1;
   },
 
   tickClocks() {
@@ -1217,4 +1232,13 @@ function main() {
   }
 }
 
-main();
+// Node's test runner `require()`s this file to reach individual modules
+// (Ticker, Cities, hhmm, ...) directly — it wires up its own minimal DOM/
+// stubs and drives those modules itself, so it must NOT also trigger a
+// real `main()` run. Browsers have no `module` global, so this is exactly
+// the normal auto-start there.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { hhmm, friendlyNameFromTz, cityNameForTz, Ticker, Cities, Hero, Monuments, Theme, main };
+} else {
+  main();
+}

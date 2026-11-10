@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/cities_db.dart';
@@ -27,6 +29,7 @@ class AppState extends ChangeNotifier {
   static const _cityStorageKey = 'worldtime.cities.v1';
   static const _heroOverrideKey = 'worldtime.heroOverride.v1';
   static const _themeStorageKey = 'worldtime.theme.v1';
+  static const _monumentStorageKey = 'worldtime.monuments.v1';
   static const minCities = 4;
   static const maxCities = 6;
   static const _geoMaxUsefulKm = 300.0;
@@ -38,6 +41,12 @@ class AppState extends ChangeNotifier {
   late HeroCity hero;
   List<CityEntry> cities = [];
   AppThemeMode themeMode = AppThemeMode.auto;
+
+  /// tz -> absolute path of a user-supplied landmark photo, copied into app
+  /// storage so it survives the picker's own (often temporary) file. When
+  /// present for a city, it replaces that city's generated skyline — mirrors
+  /// web/app.js's Monuments module.
+  Map<String, String> monumentPhotos = {};
 
   Timer? _recheckTimer;
 
@@ -59,6 +68,7 @@ class AppState extends ChangeNotifier {
     hero = override ?? _deviceTzGuess();
     cities = _loadCities() ?? _defaultStrip(hero.tz);
     themeMode = _loadThemeMode();
+    monumentPhotos = _loadMonuments();
 
     if (override == null) unawaited(_tryGeolocate());
 
@@ -199,6 +209,53 @@ class AppState extends ChangeNotifier {
     final moved = cities.removeAt(fromIndex);
     cities.insert(toIndex, moved);
     _saveCities();
+    notifyListeners();
+  }
+
+  // --- Monument photos --------------------------------------------------
+
+  Map<String, String> _loadMonuments() {
+    final raw = _prefs.getString(_monumentStorageKey);
+    if (raw == null) return {};
+    try {
+      final parsed = jsonDecode(raw) as Map<String, dynamic>;
+      final result = <String, String>{};
+      for (final entry in parsed.entries) {
+        if (File(entry.value as String).existsSync()) result[entry.key] = entry.value as String;
+      }
+      return result;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  void _saveMonuments() => _prefs.setString(_monumentStorageKey, jsonEncode(monumentPhotos));
+
+  /// Copies [sourcePath] (from the image picker, often a transient cache
+  /// file) into this app's own documents directory under a name keyed by
+  /// tz, so it survives restarts and OS cache cleanup. Replaces any
+  /// previous photo for the same city.
+  Future<void> setMonumentPhoto(String tz, String sourcePath) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final ext = sourcePath.contains('.') ? sourcePath.substring(sourcePath.lastIndexOf('.')) : '.jpg';
+    final safeName = tz.replaceAll('/', '_');
+    final dest = '${dir.path}/monument_$safeName$ext';
+
+    final previous = monumentPhotos[tz];
+    await File(sourcePath).copy(dest);
+    if (previous != null && previous != dest) {
+      unawaited(File(previous).delete().catchError((_) => File(previous)));
+    }
+
+    monumentPhotos[tz] = dest;
+    _saveMonuments();
+    notifyListeners();
+  }
+
+  void removeMonumentPhoto(String tz) {
+    final path = monumentPhotos.remove(tz);
+    if (path != null) unawaited(File(path).delete().catchError((_) => File(path)));
+    _saveMonuments();
     notifyListeners();
   }
 

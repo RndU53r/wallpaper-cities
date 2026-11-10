@@ -1,0 +1,12 @@
+{
+  "name": "world-time-web",
+  "private": true,
+  "description": "Tests for the shared web/ Motion UI (screensaver + the native shells' WebView layer). No build step for the app itself — this is dev-only tooling.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.0",
+    "vitest": "^5.1.0"
+  }
+}
