@@ -461,6 +461,21 @@ html, body {
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
 }
 
+/* Set by Scene's canvas-luminance sample, not by the Day/Night chrome
+   theme — a dark monument photo needs light ticker text even in Day
+   theme, and vice versa. The text-shadow halo keeps things legible over a
+   textured photo, not just a flat generated sky. */
+.ticker--on-dark {
+  --ticker-ink: #f5f3ee;
+  --ticker-ink-dim: rgba(245, 243, 238, 0.78);
+  --ticker-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+}
+.ticker--on-light {
+  --ticker-ink: #16161a;
+  --ticker-ink-dim: rgba(22, 22, 26, 0.72);
+  --ticker-text-shadow: 0 1px 6px rgba(255, 255, 255, 0.55);
+}
+
 .ticker__track {
   display: flex;
   align-items: stretch;
@@ -487,24 +502,33 @@ html, body {
   min-width: max-content;
 }
 
+/* The ticker sits directly over whatever the scene is currently showing —
+   a generated sky (which already roughly tracks the chrome theme) or a
+   user-supplied landmark photo (which can be any brightness at all,
+   independent of theme). --ticker-ink/-dim are set by Scene's periodic
+   canvas-luminance sample (see _sampleTickerContrast in app.js); the
+   var()-with-fallback keeps the tile legible on the ordinary theme ink
+   before that first sample lands, or if it can't run at all. */
 .city-tile__name {
   font-size: clamp(10px, 0.95vw, 13px);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-dim);
+  color: var(--ticker-ink-dim, var(--ink-dim));
   font-weight: 700;
+  text-shadow: var(--ticker-text-shadow, none);
 }
 
 .city-tile__time {
   font-size: clamp(20px, 2.6vw, 34px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: var(--ink);
+  color: var(--ticker-ink, var(--ink));
+  text-shadow: var(--ticker-text-shadow, none);
 }
 
 .city-tile__time .city-tile__meridiem {
   font-size: 0.5em;
-  color: var(--ink-dim);
+  color: var(--ticker-ink-dim, var(--ink-dim));
   margin-left: 2px;
 }
 

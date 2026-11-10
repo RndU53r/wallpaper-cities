@@ -7,6 +7,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 
 import 'data/cities_db.dart';
 import 'state/app_state.dart';
+import 'widgets/background_brightness.dart';
 import 'widgets/city_ticker.dart';
 import 'widgets/hero_clock.dart';
 import 'widgets/planner_bar.dart';
@@ -100,18 +101,43 @@ class _ThemedApp extends StatelessWidget {
   }
 }
 
-class WorldTimeHome extends StatelessWidget {
+class WorldTimeHome extends StatefulWidget {
   const WorldTimeHome({super.key});
+
+  @override
+  State<WorldTimeHome> createState() => _WorldTimeHomeState();
+}
+
+class _WorldTimeHomeState extends State<WorldTimeHome> {
+  // Whether the actual rendered pixels behind the ticker (sampled from the
+  // real background — generated scene or a user's own photo — not guessed
+  // from the Day/Night chrome theme) currently read as dark. Defaults to
+  // dark, matching the generated scene's near-black building silhouettes,
+  // which is what's behind the ticker before the first sample lands.
+  bool _tickerOnDark = true;
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
+    final monumentPath = app.monumentPhotos[app.hero.tz];
     final theme = Theme.of(context);
     final ink = theme.colorScheme.brightness == Brightness.light ? const Color(0xFF16161A) : const Color(0xFFF5F3EE);
     final inkDim = ink.withValues(alpha: 0.6);
     final cardTop = theme.colorScheme.brightness == Brightness.light ? Colors.white : const Color(0xFF1C1C1F);
     final cardBottom = theme.colorScheme.brightness == Brightness.light ? const Color(0xFFE3E3E8) : const Color(0xFF0C0C0E);
     final seam = Colors.black.withValues(alpha: theme.colorScheme.brightness == Brightness.light ? 0.14 : 0.45);
+
+    // Independent of the chrome theme — a dark monument photo needs light
+    // ticker text even in Day theme, and vice versa.
+    final tickerInk = _tickerOnDark ? const Color(0xFFF5F3EE) : const Color(0xFF16161A);
+    final tickerInkDim = tickerInk.withValues(alpha: 0.78);
+    final tickerShadow = [
+      Shadow(
+        color: (_tickerOnDark ? Colors.black : Colors.white).withValues(alpha: 0.55),
+        blurRadius: 6,
+        offset: const Offset(0, 1),
+      ),
+    ];
 
     return Scaffold(
       body: LayoutBuilder(
@@ -124,10 +150,14 @@ class WorldTimeHome extends StatelessWidget {
             children: [
               // The hero city's own landmark photo if the user added one,
               // else the generative, per-city, day/night-aware background.
-              if (app.monumentPhotos[app.hero.tz] case final path?)
-                Image.file(File(path), fit: BoxFit.cover, key: ValueKey(path))
-              else
-                _AnimatedScene(tz: app.hero.tz),
+              BackgroundBrightnessSampler(
+                onSample: (onDark) {
+                  if (onDark != _tickerOnDark && mounted) setState(() => _tickerOnDark = onDark);
+                },
+                child: monumentPath != null
+                    ? Image.file(File(monumentPath), fit: BoxFit.cover, key: ValueKey(monumentPath))
+                    : _AnimatedScene(tz: app.hero.tz),
+              ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -212,8 +242,9 @@ class WorldTimeHome extends StatelessWidget {
                       if (app.planningActive) PlannerBar(ink: ink, inkDim: inkDim, accent: theme.colorScheme.primary),
                       CityTicker(
                         cities: app.visibleCities,
-                        ink: ink,
-                        inkDim: inkDim,
+                        ink: tickerInk,
+                        inkDim: tickerInkDim,
+                        textShadows: tickerShadow,
                         accent: theme.colorScheme.primary,
                         overrideInstant: app.planningActive ? app.plannerReferenceInstant : null,
                         anchorTz: app.planningActive ? app.plannerAnchorTz : null,

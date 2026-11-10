@@ -1010,6 +1010,9 @@ const Scene = {
     window.addEventListener("resize", () => this._resize());
     this._resize();
 
+    this.tickerEl = document.getElementById("ticker");
+    this._lastContrastSample = 0;
+
     requestAnimationFrame((ts) => this._raf(ts));
   },
 
@@ -1161,7 +1164,65 @@ const Scene = {
       }
     }
 
+    // Not every frame — getImageData is a synchronous GPU readback, and
+    // the background only ever changes gradually (slow scene drift, or a
+    // static monument photo), so a few samples a second is indistinguishable
+    // from continuous while costing far less.
+    if (now - this._lastContrastSample > 600) {
+      this._lastContrastSample = now;
+      this._sampleTickerContrast(w, h);
+    }
+
     requestAnimationFrame((t) => this._raf(t));
+  },
+
+  /** Reads the actual rendered pixels under the ticker (not the theme, not
+   *  the palette math — whatever is really on screen, generated sky or a
+   *  user's own photo) and switches its text between the light/dark ink
+   *  variant so it stays legible regardless of what the background is
+   *  doing right now. */
+  _sampleTickerContrast(canvasW, canvasH) {
+    if (!this.tickerEl) return;
+    const rect = this.tickerEl.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const sx = Math.max(0, Math.round(rect.left * dpr));
+    const sy = Math.max(0, Math.round(rect.top * dpr));
+    const sw = Math.min(Math.round(canvasW * dpr) - sx, Math.round(rect.width * dpr));
+    const sh = Math.min(Math.round(canvasH * dpr) - sy, Math.round(rect.height * dpr));
+    if (sw <= 0 || sh <= 0) return;
+
+    // Downscale the ticker strip onto a tiny offscreen canvas first (a
+    // cheap GPU-side blit) rather than reading the full-resolution strip
+    // directly off the main scene canvas — that keeps the one CPU readback
+    // below to a handful of pixels, and keeps `willReadFrequently` off the
+    // canvas that's doing real per-frame drawing every tick.
+    if (!this._sampleCtx) {
+      const sampleCanvas = document.createElement("canvas");
+      sampleCanvas.width = 24;
+      sampleCanvas.height = 8;
+      this._sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
+    }
+    this._sampleCtx.drawImage(this.canvas, sx, sy, sw, sh, 0, 0, 24, 8);
+
+    let data;
+    try {
+      data = this._sampleCtx.getImageData(0, 0, 24, 8).data;
+    } catch (_) {
+      return; // e.g. a canvas-reading restriction in some embedding — leave the theme's own ink in place
+    }
+
+    let sum = 0, count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      count++;
+    }
+    if (!count) return;
+
+    const onDark = sum / count < 115;
+    this.tickerEl.classList.toggle("ticker--on-dark", onDark);
+    this.tickerEl.classList.toggle("ticker--on-light", !onDark);
   },
 
   _updateCaption(tz) {
@@ -1449,7 +1510,7 @@ function main() {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     hhmm, hhmmss, friendlyNameFromTz, cityNameForTz, zonedParts, zonedTimeToUtc, civilDayNumber, dayDeltaLabel,
-    Ticker, Cities, Hero, Monuments, Theme, Planner, main,
+    Ticker, Cities, Hero, Monuments, Theme, Planner, Scene, main,
   };
 } else {
   main();

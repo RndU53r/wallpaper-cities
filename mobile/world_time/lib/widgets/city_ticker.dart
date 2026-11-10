@@ -41,6 +41,12 @@ class CityTicker extends StatefulWidget {
   final Color inkDim;
   final Color accent;
 
+  /// A soft halo behind the tile text — set from the sampled background
+  /// brightness (see BackgroundBrightnessSampler), same purpose as the ink
+  /// color swap: keeps the tile legible over a textured photo, not just a
+  /// flat generated sky.
+  final List<Shadow>? textShadows;
+
   /// Planner mode: a fixed instant to show instead of the live clock, which
   /// city is the drag anchor (highlighted, and excluded from day-delta
   /// badges since it's the reference everything else is compared against),
@@ -55,6 +61,7 @@ class CityTicker extends StatefulWidget {
     required this.ink,
     required this.inkDim,
     this.accent = Colors.orange,
+    this.textShadows,
     this.overrideInstant,
     this.anchorTz,
     this.onCityTap,
@@ -130,7 +137,7 @@ class _CityTickerState extends State<CityTicker> with SingleTickerProviderStateM
           children: [
             Text(
               city.name.toUpperCase(),
-              style: _nameStyle.copyWith(color: isAnchor ? widget.accent : widget.inkDim),
+              style: _nameStyle.copyWith(color: isAnchor ? widget.accent : widget.inkDim, shadows: widget.textShadows),
               maxLines: 1,
               overflow: TextOverflow.visible,
               softWrap: false,
@@ -140,7 +147,10 @@ class _CityTickerState extends State<CityTicker> with SingleTickerProviderStateM
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_hhmm(city.tz, widget.overrideInstant), style: _timeStyle.copyWith(color: tileColor)),
+                Text(
+                  _hhmm(city.tz, widget.overrideInstant),
+                  style: _timeStyle.copyWith(color: tileColor, shadows: widget.textShadows),
+                ),
                 if (delta != null)
                   Padding(
                     padding: const EdgeInsets.only(left: 2, top: 2),
