@@ -32,6 +32,13 @@
           <path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
         </svg>
       </button>
+      <button class="icon-btn" id="plannerBtn" aria-label="Compare times" title="Compare times" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M16 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="12.5" cy="12" r="2.6" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </button>
       <button class="icon-btn" id="settingsBtn" aria-label="City settings" title="City settings">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="3" y="3" width="7" height="7" rx="1.2" stroke="currentColor" stroke-width="1.4"/>
@@ -47,6 +54,27 @@
     <div class="hero__label" id="heroLabel">LOCAL</div>
     <div class="hero__clock" id="heroClock"></div>
   </main>
+
+  <!-- Planning mode: drag the anchor city to any time of day and see what
+       that same instant is for every other tracked city. Hidden/inert
+       until the "Compare times" button above opens it. -->
+  <div class="planner" id="planner" hidden>
+    <div class="planner__head">
+      <div class="planner__anchor" id="plannerAnchor">—</div>
+      <div class="planner__daystep">
+        <button class="planner__day-btn" id="plannerPrevDay" aria-label="Previous day">‹</button>
+        <span class="planner__day-label" id="plannerDayLabel">—</span>
+        <button class="planner__day-btn" id="plannerNextDay" aria-label="Next day">›</button>
+      </div>
+      <button class="planner__exit" id="plannerExit">Now</button>
+    </div>
+    <div class="planner__track" id="plannerTrack">
+      <div class="planner__ticks" id="plannerTicks"></div>
+      <div class="planner__handle" id="plannerHandle">
+        <span class="planner__handle-time" id="plannerHandleTime">00:00</span>
+      </div>
+    </div>
+  </div>
 
   <footer class="ticker" id="ticker" aria-hidden="true">
     <div class="ticker__track" id="tickerTrack"></div>

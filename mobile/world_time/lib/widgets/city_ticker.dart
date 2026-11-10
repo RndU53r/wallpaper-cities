@@ -3,12 +3,13 @@ import 'package:flutter/scheduler.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import '../data/cities_db.dart';
+import '../state/app_state.dart';
 import 'hero_clock.dart';
 
-String _hhmm(String timezone) {
+String _hhmm(String timezone, [DateTime? at]) {
   try {
     final loc = tz.getLocation(timezone);
-    final now = tz.TZDateTime.now(loc);
+    final now = at != null ? tz.TZDateTime.from(at, loc) : tz.TZDateTime.now(loc);
     String two(int v) => v.toString().padLeft(2, '0');
     return '${two(now.hour)}:${two(now.minute)}';
   } catch (_) {
@@ -19,6 +20,7 @@ String _hhmm(String timezone) {
 const double _tileHorizontalPadding = 18;
 const _nameStyle = TextStyle(fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w700);
 const _timeStyle = TextStyle(fontSize: 26, fontWeight: FontWeight.w800);
+const _badgeStyle = TextStyle(fontSize: 11, fontWeight: FontWeight.w800);
 
 double _textWidth(String text, TextStyle style) {
   final painter = TextPainter(
@@ -37,8 +39,26 @@ class CityTicker extends StatefulWidget {
   final List<CityEntry> cities;
   final Color ink;
   final Color inkDim;
+  final Color accent;
 
-  const CityTicker({super.key, required this.cities, required this.ink, required this.inkDim});
+  /// Planner mode: a fixed instant to show instead of the live clock, which
+  /// city is the drag anchor (highlighted, and excluded from day-delta
+  /// badges since it's the reference everything else is compared against),
+  /// and a tap handler so tapping another tile re-anchors the drag to it.
+  final DateTime? overrideInstant;
+  final String? anchorTz;
+  final void Function(String tz)? onCityTap;
+
+  const CityTicker({
+    super.key,
+    required this.cities,
+    required this.ink,
+    required this.inkDim,
+    this.accent = Colors.orange,
+    this.overrideInstant,
+    this.anchorTz,
+    this.onCityTap,
+  });
 
   @override
   State<CityTicker> createState() => _CityTickerState();
@@ -93,22 +113,43 @@ class _CityTickerState extends State<CityTicker> with SingleTickerProviderStateM
   }
 
   Widget _tile(CityEntry city) {
+    final isAnchor = widget.anchorTz != null && city.tz == widget.anchorTz;
+    final delta = widget.overrideInstant != null && widget.anchorTz != null
+        ? dayDeltaLabel(city.tz, widget.anchorTz!, widget.overrideInstant!)
+        : null;
+    final tileColor = isAnchor ? widget.accent : widget.ink;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: _tileHorizontalPadding),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            city.name.toUpperCase(),
-            style: _nameStyle.copyWith(color: widget.inkDim),
-            maxLines: 1,
-            overflow: TextOverflow.visible,
-            softWrap: false,
-          ),
-          const SizedBox(height: 4),
-          Text(_hhmm(city.tz), style: _timeStyle.copyWith(color: widget.ink)),
-        ],
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onCityTap != null ? () => widget.onCityTap!(city.tz) : null,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              city.name.toUpperCase(),
+              style: _nameStyle.copyWith(color: isAnchor ? widget.accent : widget.inkDim),
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+              softWrap: false,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_hhmm(city.tz, widget.overrideInstant), style: _timeStyle.copyWith(color: tileColor)),
+                if (delta != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 2, top: 2),
+                    child: Text(delta, style: _badgeStyle.copyWith(color: widget.accent)),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -125,7 +166,7 @@ class _CityTickerState extends State<CityTicker> with SingleTickerProviderStateM
         double singlePassWidth = 0;
         for (final city in widget.cities) {
           final nameWidth = _textWidth(city.name.toUpperCase(), _nameStyle);
-          final timeWidth = _textWidth(_hhmm(city.tz), _timeStyle);
+          final timeWidth = _textWidth(_hhmm(city.tz, widget.overrideInstant), _timeStyle);
           singlePassWidth += (nameWidth > timeWidth ? nameWidth : timeWidth) + _tileHorizontalPadding * 2;
         }
         final fits = singlePassWidth <= constraints.maxWidth;

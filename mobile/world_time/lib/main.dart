@@ -5,9 +5,11 @@ import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 
+import 'data/cities_db.dart';
 import 'state/app_state.dart';
 import 'widgets/city_ticker.dart';
 import 'widgets/hero_clock.dart';
+import 'widgets/planner_bar.dart';
 import 'widgets/scene_background.dart';
 import 'widgets/settings_sheet.dart';
 
@@ -144,19 +146,40 @@ class WorldTimeHome extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.access_time, size: 18, color: ink),
-                              const SizedBox(width: 8),
-                              Text('WORLD TIME', style: TextStyle(color: ink, fontWeight: FontWeight.w800, letterSpacing: 3, fontSize: 14)),
-                            ],
+                          Flexible(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.access_time, size: 18, color: ink),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'WORLD TIME',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: ink, fontWeight: FontWeight.w800, letterSpacing: 3, fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(_dateLabel(), style: TextStyle(color: inkDim, fontWeight: FontWeight.w600, fontSize: 12)),
-                              const SizedBox(width: 12),
-                              IconButton(
-                                icon: const Icon(Icons.settings_outlined),
+                              Text(
+                                _dateLabel(abbreviated: !isTablet),
+                                style: TextStyle(color: inkDim, fontWeight: FontWeight.w600, fontSize: 12),
+                              ),
+                              const SizedBox(width: 6),
+                              _TopbarIconButton(
+                                icon: Icons.tune,
+                                tooltip: 'Compare times',
+                                color: app.planningActive ? theme.colorScheme.onPrimary : ink,
+                                background: app.planningActive ? theme.colorScheme.primary : null,
+                                onPressed: () => app.planningActive ? app.exitPlanning() : app.enterPlanning(),
+                              ),
+                              _TopbarIconButton(
+                                icon: Icons.settings_outlined,
+                                tooltip: 'City settings',
                                 color: ink,
                                 onPressed: () => showModalBottomSheet(
                                   context: context,
@@ -172,18 +195,30 @@ class WorldTimeHome extends StatelessWidget {
                       Expanded(
                         child: Center(
                           child: HeroClock(
-                            tz: app.hero.tz,
-                            label: '${app.hero.name} · Local',
+                            tz: app.planningActive ? app.plannerAnchorTz! : app.hero.tz,
+                            label: app.planningActive
+                                ? '${cityNameForTz(app.plannerAnchorTz!)} · Set Time'
+                                : '${app.hero.name} · Local',
                             cardTop: cardTop,
                             cardBottom: cardBottom,
                             seamColor: seam,
                             ink: ink,
                             inkDim: inkDim,
                             digitSize: digitSize,
+                            overrideInstant: app.planningActive ? app.plannerReferenceInstant : null,
                           ),
                         ),
                       ),
-                      CityTicker(cities: app.visibleCities, ink: ink, inkDim: inkDim),
+                      if (app.planningActive) PlannerBar(ink: ink, inkDim: inkDim, accent: theme.colorScheme.primary),
+                      CityTicker(
+                        cities: app.visibleCities,
+                        ink: ink,
+                        inkDim: inkDim,
+                        accent: theme.colorScheme.primary,
+                        overrideInstant: app.planningActive ? app.plannerReferenceInstant : null,
+                        anchorTz: app.planningActive ? app.plannerAnchorTz : null,
+                        onCityTap: app.planningActive ? app.setPlannerAnchor : null,
+                      ),
                       const SizedBox(height: 8),
                     ],
                   ),
@@ -196,14 +231,55 @@ class WorldTimeHome extends StatelessWidget {
     );
   }
 
-  String _dateLabel() {
+  String _dateLabel({bool abbreviated = false}) {
     final now = DateTime.now();
     const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December',
     ];
+    // The phone-width topbar is tight once the compare-times and settings
+    // icons are both present — "Tue, Nov 10" instead of the full
+    // "Tuesday, November 10" is what keeps that row from overflowing.
+    if (abbreviated) {
+      return '${weekdays[now.weekday - 1].substring(0, 3)}, ${months[now.month - 1].substring(0, 3)} ${now.day}';
+    }
     return '${weekdays[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+  }
+}
+
+/// A smaller-footprint IconButton for the topbar — the default IconButton's
+/// 48x48 minimum tap target is what pushed the phone-width topbar row into
+/// overflow once a second icon joined the settings gear.
+class _TopbarIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final Color color;
+  final Color? background;
+  final VoidCallback onPressed;
+
+  const _TopbarIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.color,
+    required this.onPressed,
+    this.background,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon, size: 20),
+      tooltip: tooltip,
+      color: color,
+      style: IconButton.styleFrom(
+        backgroundColor: background,
+        minimumSize: const Size(36, 36),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: onPressed,
+    );
   }
 }
 

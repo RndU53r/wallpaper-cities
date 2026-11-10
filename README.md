@@ -16,6 +16,14 @@ back to your device's timezone, then to a manual picker — and never blocks
 the UI. A strip of 4–6 other cities (bounded, reorderable) runs underneath,
 always excluding whichever city is currently the hero.
 
+A "Compare times" mode (the ⚙︎-adjacent icon next to settings) turns the
+clock into a meeting planner: pick an anchor city, drag along a 24h track to
+any time of day, and every other tracked city's tile updates live to show
+what that same instant is there — with a day-stepper and a `+1`/`-1` badge
+on any city that's landed on a different calendar date. It's a momentary
+comparison tool (not persisted), and deliberately doesn't touch the UI theme
+or each city's generated sky — those keep reflecting real, current time.
+
 All installers in this repo are **unsigned/debug** — there's no Apple
 Developer, Google Play, or code-signing account configured for this project
 yet. See each platform's section below for what that means in practice.
@@ -178,3 +186,20 @@ shared code, since the mobile app is a separate native codebase.
   for something device-timezone already approximates well.
 - **No signed/store releases yet.** Every installer here is unsigned/debug;
   wiring up real Apple/Google/code-signing accounts is a later step.
+
+## Roadmap
+
+- **Outlook integration for the planner.** The "Compare times" planner
+  (above) currently only compares timezones — it has no awareness of actual
+  calendar events. Two follow-on phases, planned but not started:
+  1. **Read-only calendar lookup via Microsoft Graph API**, added into the
+     existing apps: while planning a time, show what meeting (if any) is on
+     the anchor city's calendar then. This is the first real network
+     dependency the project would take on (everything today is
+     offline/on-device by design), and needs an Azure AD app registration
+     (client ID, OAuth consent) that doesn't exist yet.
+  2. **A real Outlook Add-in** — a separate, Office.js-based panel that runs
+     inside Outlook itself, rather than a feature bolted onto this app. A
+     distinct project from the screensaver/mobile apps here: its own
+     manifest, its own hosting, its own install flow (sideloaded manifest or
+     an AppSource listing).

@@ -36,6 +36,12 @@ class HeroClock extends StatefulWidget {
   final Color inkDim;
   final double digitSize;
 
+  /// When set (planner mode), the clock shows this fixed instant instead of
+  /// ticking live — the live ClockAlignedTicker keeps running regardless
+  /// (recomputing the same fixed value is harmless), so no special pause
+  /// logic is needed to enter/leave this mode.
+  final DateTime? overrideInstant;
+
   const HeroClock({
     super.key,
     required this.tz,
@@ -46,6 +52,7 @@ class HeroClock extends StatefulWidget {
     required this.ink,
     required this.inkDim,
     required this.digitSize,
+    this.overrideInstant,
   });
 
   @override
@@ -67,7 +74,9 @@ class _HeroClockState extends State<HeroClock> {
   @override
   void didUpdateWidget(covariant HeroClock old) {
     super.didUpdateWidget(old);
-    if (old.tz != widget.tz) setState(() => _digits = _computeDigits());
+    if (old.tz != widget.tz || old.overrideInstant != widget.overrideInstant) {
+      setState(() => _digits = _computeDigits());
+    }
   }
 
   @override
@@ -77,14 +86,13 @@ class _HeroClockState extends State<HeroClock> {
   }
 
   String _computeDigits() {
+    String two(int v) => v.toString().padLeft(2, '0');
     try {
       final loc = tz.getLocation(widget.tz);
-      final now = tz.TZDateTime.now(loc);
-      String two(int v) => v.toString().padLeft(2, '0');
+      final now = widget.overrideInstant != null ? tz.TZDateTime.from(widget.overrideInstant!, loc) : tz.TZDateTime.now(loc);
       return '${two(now.hour)}${two(now.minute)}${two(now.second)}';
     } catch (_) {
-      final now = DateTime.now();
-      String two(int v) => v.toString().padLeft(2, '0');
+      final now = widget.overrideInstant ?? DateTime.now();
       return '${two(now.hour)}${two(now.minute)}${two(now.second)}';
     }
   }

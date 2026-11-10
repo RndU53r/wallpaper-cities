@@ -83,11 +83,11 @@ function prefersReducedMotion() {
   return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-function localHourFraction(tz) {
+function localHourFraction(tz, at = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone: tz, hour: "numeric", minute: "numeric", second: "numeric", hour12: false,
   });
-  const parts = fmt.formatToParts(new Date());
+  const parts = fmt.formatToParts(at);
   const get = (type) => Number(parts.find((p) => p.type === type).value);
   const h = get("hour") % 24;
   const m = get("minute");
@@ -95,22 +95,64 @@ function localHourFraction(tz) {
   return h + m / 60 + s / 3600;
 }
 
-function hhmmss(tz) {
+function hhmmss(tz, at = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
   });
-  const parts = fmt.formatToParts(new Date());
+  const parts = fmt.formatToParts(at);
   const get = (type) => parts.find((p) => p.type === type).value;
   return { h: get("hour"), m: get("minute"), s: get("second") };
 }
 
-function hhmm(tz) {
+function hhmm(tz, at = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false,
   });
-  const parts = fmt.formatToParts(new Date());
+  const parts = fmt.formatToParts(at);
   const get = (type) => parts.find((p) => p.type === type).value;
   return `${get("hour")}:${get("minute")}`;
+}
+
+/** This instant's full date+time, as a civil calendar reads it in `tz`. */
+function zonedParts(tz, at = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    weekday: "short",
+  });
+  const parts = fmt.formatToParts(at);
+  const get = (type) => parts.find((p) => p.type === type).value;
+  return {
+    year: Number(get("year")), month: Number(get("month")), day: Number(get("day")),
+    hour: Number(get("hour")) % 24, minute: Number(get("minute")), second: Number(get("second")),
+    weekday: get("weekday"),
+  };
+}
+
+/** Days since the Unix epoch for a (year, month, day) civil date — used only
+ *  to compare two zoned dates (e.g. "is this city a day ahead of the
+ *  anchor?"), not as a real instant. */
+function civilDayNumber(year, month, day) {
+  return Math.round(Date.UTC(year, month - 1, day) / 86400000);
+}
+
+/** The UTC instant at which `tz`'s wall clock reads (year, month, day,
+ *  hour, minute) — the inverse of zonedParts(). There's no direct Intl API
+ *  for this, so it's solved the standard way: guess, see how far the guess's
+ *  own zoned reading is from the target, correct, repeat. Two passes are
+ *  enough even across a DST transition (the offset can change by at most a
+ *  couple of hours, well within what two corrections resolve). */
+function zonedTimeToUtc(tz, year, month, day, hour, minute) {
+  let guess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  for (let i = 0; i < 2; i++) {
+    const read = zonedParts(tz, new Date(guess));
+    const readUtc = Date.UTC(read.year, read.month - 1, read.day, read.hour, read.minute, read.second);
+    const wantUtc = Date.UTC(year, month - 1, day, hour, minute, 0);
+    const diff = wantUtc - readUtc;
+    if (diff === 0) break;
+    guess += diff;
+  }
+  return new Date(guess);
 }
 
 /** Fires a clock-aligned tick at (as close as possible to) every second
@@ -288,6 +330,147 @@ window.addEventListener("storage", (e) => {
   Theme._apply();
   Theme._notify();
 });
+
+// ---------------------------------------------------------------------------
+// Planner — "what time would it be": drag a chosen (anchor) city to any time
+// of day and see that same instant translated into every other tracked
+// city. Deliberately not persisted (a momentary comparison tool, not a
+// preference) and deliberately not wired into Theme/Scene — the UI chrome
+// and generated skylines keep reflecting real, current time throughout.
+// ---------------------------------------------------------------------------
+
+const MONTH_ABBR = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
+/** +N/-N if `cityTz` is a calendar day ahead/behind `anchorTz` at the same
+ *  instant, null if they're on the same date. */
+function dayDeltaLabel(cityTz, anchorTz, at) {
+  const c = zonedParts(cityTz, at);
+  const a = zonedParts(anchorTz, at);
+  const delta = civilDayNumber(c.year, c.month, c.day) - civilDayNumber(a.year, a.month, a.day);
+  return delta === 0 ? null : (delta > 0 ? "+" : "") + delta;
+}
+
+const Planner = {
+  active: false,
+  anchorTz: null,
+  referenceInstant: null,
+
+  init() {
+    this.btn = document.getElementById("plannerBtn");
+    this.panel = document.getElementById("planner");
+    this.anchorLabel = document.getElementById("plannerAnchor");
+    this.dayLabel = document.getElementById("plannerDayLabel");
+    this.track = document.getElementById("plannerTrack");
+    this.ticksEl = document.getElementById("plannerTicks");
+    this.handle = document.getElementById("plannerHandle");
+    this.handleTime = document.getElementById("plannerHandleTime");
+
+    this._buildTicks();
+
+    this.btn.addEventListener("click", () => { if (this.active) this.exit(); else this.enter(); });
+    document.getElementById("plannerExit").addEventListener("click", () => this.exit());
+    document.getElementById("plannerPrevDay").addEventListener("click", () => this.shiftDay(-1));
+    document.getElementById("plannerNextDay").addEventListener("click", () => this.shiftDay(1));
+
+    this.track.addEventListener("pointerdown", (e) => this._onPointerDown(e));
+
+    this._render();
+  },
+
+  _buildTicks() {
+    this.ticksEl.innerHTML = "";
+    for (let h = 0; h <= 24; h += 3) {
+      const tick = document.createElement("div");
+      tick.className = "planner__tick";
+      const label = document.createElement("span");
+      label.textContent = String(h % 24).padStart(2, "0");
+      tick.appendChild(label);
+      this.ticksEl.appendChild(tick);
+    }
+  },
+
+  enter(tz) {
+    this.active = true;
+    this.anchorTz = tz || (Hero.current ? Hero.current.tz : LOCAL_TZ);
+    this.referenceInstant = new Date();
+    this._notify();
+  },
+
+  exit() {
+    if (!this.active) return;
+    this.active = false;
+    this._notify();
+  },
+
+  setAnchor(tz) {
+    if (!this.active || tz === this.anchorTz) return;
+    this.anchorTz = tz;
+    this._notify();
+  },
+
+  setTimeOfDay(hour, minute) {
+    if (!this.active) return;
+    const current = zonedParts(this.anchorTz, this.referenceInstant);
+    this.referenceInstant = zonedTimeToUtc(this.anchorTz, current.year, current.month, current.day, hour, minute);
+    this._notify();
+  },
+
+  shiftDay(delta) {
+    if (!this.active) return;
+    const current = zonedParts(this.anchorTz, this.referenceInstant);
+    const shifted = new Date(Date.UTC(current.year, current.month - 1, current.day + delta));
+    this.referenceInstant = zonedTimeToUtc(
+      this.anchorTz,
+      shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate(),
+      current.hour, current.minute
+    );
+    this._notify();
+  },
+
+  _onPointerDown(e) {
+    e.preventDefault();
+    this.track.setPointerCapture(e.pointerId);
+    const move = (ev) => this._updateFromClientX(ev.clientX);
+    const up = () => {
+      this.track.removeEventListener("pointermove", move);
+      this.track.removeEventListener("pointerup", up);
+      this.track.removeEventListener("pointercancel", up);
+    };
+    this.track.addEventListener("pointermove", move);
+    this.track.addEventListener("pointerup", up);
+    this.track.addEventListener("pointercancel", up);
+    move(e);
+  },
+
+  _updateFromClientX(clientX) {
+    const rect = this.track.getBoundingClientRect();
+    const frac = clamp01((clientX - rect.left) / Math.max(1, rect.width));
+    let minutes = Math.round((frac * 1440) / 5) * 5;
+    if (minutes >= 1440) minutes = 1435;
+    this.setTimeOfDay(Math.floor(minutes / 60), minutes % 60);
+  },
+
+  onChange(fn) { (this._listeners = this._listeners || []).push(fn); },
+  _notify() {
+    this._render();
+    (this._listeners || []).forEach((fn) => fn());
+  },
+
+  _render() {
+    this.btn.setAttribute("aria-pressed", String(this.active));
+    this.panel.hidden = !this.active;
+    if (!this.active) return;
+
+    this.anchorLabel.textContent = cityNameForTz(this.anchorTz).toUpperCase();
+
+    const parts = zonedParts(this.anchorTz, this.referenceInstant);
+    this.dayLabel.textContent = `${parts.weekday.toUpperCase()} · ${MONTH_ABBR[parts.month - 1]} ${parts.day}`;
+
+    const minutes = parts.hour * 60 + parts.minute;
+    this.handle.style.left = (minutes / 1440) * 100 + "%";
+    this.handleTime.textContent = `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`;
+  },
+};
 
 // ---------------------------------------------------------------------------
 // City strip persistence (4-6 cities, never including the hero city)
@@ -598,13 +781,17 @@ const HeroClock = {
     this.digits = buildFlipGroup(container, 6, new Set([1, 3]));
     this._renderLabel();
     Hero.onChange(() => this._renderLabel());
+    Planner.onChange(() => { this._renderLabel(); this.tick(); });
   },
   _renderLabel() {
-    document.getElementById("heroLabel").textContent =
-      Hero.current.name.toUpperCase() + " · LOCAL";
+    document.getElementById("heroLabel").textContent = Planner.active
+      ? cityNameForTz(Planner.anchorTz).toUpperCase() + " · SET TIME"
+      : Hero.current.name.toUpperCase() + " · LOCAL";
   },
   tick() {
-    const { h, m, s } = hhmmss(Hero.current.tz);
+    const tz = Planner.active ? Planner.anchorTz : Hero.current.tz;
+    const at = Planner.active ? Planner.referenceInstant : new Date();
+    const { h, m, s } = hhmmss(tz, at);
     const str = h + m + s;
     for (let i = 0; i < 6; i++) this.digits[i].set(str[i]);
   },
@@ -625,6 +812,12 @@ const Ticker = {
     this.track = document.getElementById("tickerTrack");
     Cities.onChange(() => this.rebuild());
     Hero.onChange(() => this.rebuild());
+    // A tile set's cities don't change just because planning starts/stops
+    // or the anchor switches — only each tile's displayed value and
+    // highlighting do, which tickClocks() already handles per render. Only
+    // the one-time wiring (rebuild) needs Cities/Hero; Planner stays on the
+    // cheap per-tick path so a drag updates live, not once a second.
+    Planner.onChange(() => this.tickClocks());
     // ResizeObserver reacts to the container's actual box size changing for
     // any reason (window resize, display change, zoom) — more reliable
     // than the `resize` event, which some hosts don't dispatch for every
@@ -646,15 +839,22 @@ const Ticker = {
     name.textContent = city.name;
     const time = document.createElement("div");
     time.className = "city-tile__time";
+    const timeValue = document.createElement("span");
     // Set immediately rather than waiting for the next tickClocks() pass —
     // left blank, a freshly built tile (in particular the second,
     // scrolling-duplicate pass below, built after main()'s one synchronous
     // tickClocks() call already ran) would render with no time text until
     // the next clock-aligned tick, up to a second later.
-    time.textContent = hhmm(city.tz);
+    timeValue.textContent = hhmm(city.tz);
+    const badge = document.createElement("span");
+    badge.className = "city-tile__daydelta";
+    badge.hidden = true;
+    time.appendChild(timeValue);
+    time.appendChild(badge);
     tile.appendChild(name);
     tile.appendChild(time);
-    this.tiles.push({ tz: city.tz, timeEl: time });
+    tile.addEventListener("click", () => Planner.setAnchor(city.tz));
+    this.tiles.push({ tz: city.tz, rootEl: tile, timeEl: timeValue, badgeEl: badge });
     return tile;
   },
 
@@ -692,7 +892,15 @@ const Ticker = {
   },
 
   tickClocks() {
-    (this.tiles || []).forEach((t) => { t.timeEl.textContent = hhmm(t.tz); });
+    this.container.classList.toggle("ticker--planning", Planner.active);
+    const at = Planner.active ? Planner.referenceInstant : new Date();
+    (this.tiles || []).forEach((t) => {
+      t.timeEl.textContent = hhmm(t.tz, at);
+      t.rootEl.classList.toggle("city-tile--anchor", Planner.active && t.tz === Planner.anchorTz);
+      const delta = Planner.active ? dayDeltaLabel(t.tz, Planner.anchorTz, at) : null;
+      t.badgeEl.hidden = !delta;
+      if (delta) t.badgeEl.textContent = delta;
+    });
   },
 
   _raf(ts) {
@@ -1209,6 +1417,7 @@ function main() {
 
   HeroClock.init();
   Ticker.init();
+  Planner.init();
   Scene.init();
   Panel.init();
 
@@ -1238,7 +1447,10 @@ function main() {
 // real `main()` run. Browsers have no `module` global, so this is exactly
 // the normal auto-start there.
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { hhmm, friendlyNameFromTz, cityNameForTz, Ticker, Cities, Hero, Monuments, Theme, main };
+  module.exports = {
+    hhmm, hhmmss, friendlyNameFromTz, cityNameForTz, zonedParts, zonedTimeToUtc, civilDayNumber, dayDeltaLabel,
+    Ticker, Cities, Hero, Monuments, Theme, Planner, main,
+  };
 } else {
   main();
 }

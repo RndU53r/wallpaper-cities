@@ -7,8 +7,20 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 import '../data/cities_db.dart';
+
+/// +N/-N if `cityTz` is a calendar day ahead/behind `anchorTz` at the same
+/// instant, null if they're on the same date. Mirrors web/app.js's
+/// dayDeltaLabel so both platforms report the same thing for the same input.
+String? dayDeltaLabel(String cityTz, String anchorTz, DateTime at) {
+  final c = tz.TZDateTime.from(at, tz.getLocation(cityTz));
+  final a = tz.TZDateTime.from(at, tz.getLocation(anchorTz));
+  final delta = DateTime.utc(c.year, c.month, c.day).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
+  if (delta == 0) return null;
+  return (delta > 0 ? '+' : '') + delta.toString();
+}
 
 enum HeroSource { manual, geo, deviceTz }
 
@@ -47,6 +59,15 @@ class AppState extends ChangeNotifier {
   /// present for a city, it replaces that city's generated skyline — mirrors
   /// web/app.js's Monuments module.
   Map<String, String> monumentPhotos = {};
+
+  /// Planner ("what time would it be"): drag a chosen city to any time of
+  /// day and see that same instant translated into every other tracked
+  /// city. Deliberately not persisted (a momentary comparison tool) and
+  /// deliberately not wired into theme/background — those keep reflecting
+  /// real, current time regardless of what's being planned.
+  bool planningActive = false;
+  String? plannerAnchorTz;
+  DateTime? plannerReferenceInstant;
 
   Timer? _recheckTimer;
 
@@ -256,6 +277,50 @@ class AppState extends ChangeNotifier {
     final path = monumentPhotos.remove(tz);
     if (path != null) unawaited(File(path).delete().catchError((_) => File(path)));
     _saveMonuments();
+    notifyListeners();
+  }
+
+  // --- Planner ------------------------------------------------------------
+
+  void enterPlanning([String? anchorTz]) {
+    planningActive = true;
+    plannerAnchorTz = anchorTz ?? hero.tz;
+    plannerReferenceInstant = DateTime.now().toUtc();
+    notifyListeners();
+  }
+
+  void exitPlanning() {
+    if (!planningActive) return;
+    planningActive = false;
+    notifyListeners();
+  }
+
+  void setPlannerAnchor(String anchorTz) {
+    if (!planningActive || anchorTz == plannerAnchorTz) return;
+    plannerAnchorTz = anchorTz;
+    notifyListeners();
+  }
+
+  void setPlannerTimeOfDay(int hour, int minute) {
+    if (!planningActive || plannerAnchorTz == null) return;
+    final loc = tz.getLocation(plannerAnchorTz!);
+    final current = tz.TZDateTime.from(plannerReferenceInstant!, loc);
+    plannerReferenceInstant = tz.TZDateTime(loc, current.year, current.month, current.day, hour, minute).toUtc();
+    notifyListeners();
+  }
+
+  void shiftPlannerDay(int delta) {
+    if (!planningActive || plannerAnchorTz == null) return;
+    final loc = tz.getLocation(plannerAnchorTz!);
+    final current = tz.TZDateTime.from(plannerReferenceInstant!, loc);
+    // Normalize the day/month/year rollover in plain UTC math first, then
+    // hand the resulting calendar date to TZDateTime's own constructor —
+    // which is what resolves the wall-clock hour/minute correctly across a
+    // DST boundary, the same two-step approach web/app.js's shiftDay uses.
+    final shiftedDate = DateTime.utc(current.year, current.month, current.day + delta);
+    plannerReferenceInstant = tz
+        .TZDateTime(loc, shiftedDate.year, shiftedDate.month, shiftedDate.day, current.hour, current.minute)
+        .toUtc();
     notifyListeners();
   }
 
