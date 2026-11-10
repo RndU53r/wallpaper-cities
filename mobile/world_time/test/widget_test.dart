@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 
 import 'package:world_time/data/cities_db.dart';
+import 'package:world_time/state/app_state.dart';
 import 'package:world_time/widgets/city_ticker.dart';
+import 'package:world_time/widgets/settings_sheet.dart';
 
 void main() {
   setUpAll(tzdata.initializeTimeZones);
@@ -92,6 +95,68 @@ void main() {
         (w) => w is Text && RegExp(r'^\d{2}:\d{2}$').hasMatch(w.data ?? ''),
       );
       expect(timeFinder, findsNWidgets(cities.length));
+    });
+  });
+
+  group('SettingsSheet background', () {
+    // Regression: showModalBottomSheet's `backgroundColor` (set once in
+    // main.dart, from whatever the theme was *when the sheet opened*) does
+    // not update if the theme changes from a control *inside* the open
+    // sheet — toggling Day/Night there left the backdrop on the old color
+    // while all the text above it correctly re-themed, making everything
+    // unreadable. SettingsSheet now paints its own background from the
+    // ambient (reactive) Theme, so it must never match a stale color passed
+    // to the surrounding modal route.
+    testWidgets('paints from the live theme, not the stale color the modal route opened with', (tester) async {
+      // Build AppState's minimal rendering state directly rather than
+      // calling init() — init() talks to the geolocator/flutter_timezone
+      // platform channels, which aren't mocked in a widget test and hang
+      // rather than failing fast.
+      final app = AppState()
+        ..hero = const HeroCity(name: 'Delhi', tz: 'Asia/Kolkata', source: HeroSource.deviceTz)
+        ..cities = const [
+          CityEntry(name: 'New York', tz: 'America/New_York', lat: 40.71, lon: -74.01),
+          CityEntry(name: 'London', tz: 'Europe/London', lat: 51.51, lon: -0.13),
+          CityEntry(name: 'Paris', tz: 'Europe/Paris', lat: 48.85, lon: 2.35),
+          CityEntry(name: 'Kyiv', tz: 'Europe/Kyiv', lat: 50.45, lon: 30.52),
+        ];
+
+      const staleColor = Colors.white; // what the modal was opened with
+      const liveColor = Color(0xFF0A0A0C); // the *current* (dark) scaffold background
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<AppState>.value(
+          value: app,
+          child: MaterialApp(
+            theme: ThemeData(brightness: Brightness.dark, scaffoldBackgroundColor: liveColor),
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: staleColor,
+                      builder: (_) => const SettingsSheet(),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      final containers = tester
+          .widgetList<Container>(find.descendant(of: find.byType(SettingsSheet), matching: find.byType(Container)))
+          .map((c) => (c.decoration as BoxDecoration?)?.color ?? c.color)
+          .toList();
+      expect(containers, contains(liveColor));
+      expect(containers, isNot(contains(staleColor)));
     });
   });
 }
